@@ -1,0 +1,129 @@
+/*
+ * Copyright 2016 Santanu Sinha <santanu.sinha@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
+package io.dropwizard.sharding.bundle;
+
+import com.codahale.metrics.health.HealthCheckRegistry;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
+import io.dropwizard.sharding.DBShardingBundle;
+import io.dropwizard.sharding.config.ShardedHibernateFactory;
+import io.dropwizard.sharding.dao.WrapperDao;
+import io.dropwizard.sharding.dao.testdata.OrderDao;
+import io.dropwizard.sharding.dao.testdata.entities.Order;
+import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
+import io.dropwizard.Configuration;
+import io.dropwizard.db.DataSourceFactory;
+import io.dropwizard.jersey.DropwizardResourceConfig;
+import io.dropwizard.jersey.setup.JerseyEnvironment;
+import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
+import io.dropwizard.setup.Bootstrap;
+import io.dropwizard.setup.Environment;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+/**
+ * Top level test. Saves an order using custom dao to a shard belonging to a particular customer.
+ * Core systems are not mocked. Uses H2 for testing.
+ */
+public class DBShardingBundleTest {
+    private static class TestConfig extends Configuration {
+        private ShardedHibernateFactory shards = new ShardedHibernateFactory();
+    }
+
+    private final TestConfig testConfig = new TestConfig();
+    private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
+    private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
+    private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
+    private final Environment environment = mock(Environment.class);
+    private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
+
+
+    private DBShardingBundle<TestConfig> bundle = new DBShardingBundle<TestConfig>(Order.class, OrderItem.class) {
+        @Override
+        protected ShardedHibernateFactory getConfig(TestConfig config) {
+            return testConfig.shards;
+        }
+    };
+
+    private DataSourceFactory createConfig(String dbName) {
+        Map<String,String> properties = Maps.newHashMap();
+        properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        properties.put("hibernate.hbm2ddl.auto", "create");
+
+        DataSourceFactory shard = new DataSourceFactory();
+        shard.setDriverClass("org.h2.Driver");
+        shard.setUrl("jdbc:h2:mem:" + dbName);
+        shard.setValidationQuery("select 1");
+        shard.setProperties(properties);
+
+        return shard;
+    }
+
+    @Before
+    public void setup() throws Exception {
+        testConfig.shards.setShards(ImmutableList.of(createConfig("1"), createConfig("2")));
+
+        when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
+        when(environment.jersey()).thenReturn(jerseyEnvironment);
+        when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
+        when(environment.healthChecks()).thenReturn(healthChecks);
+
+        bundle.initialize(bootstrap);
+        bundle.initBundles(bootstrap);
+        bundle.runBundles(testConfig, environment);
+        bundle.run(testConfig, environment);
+    }
+
+    @Test
+    public void testBundle() {
+        WrapperDao<Order, OrderDao> dao = DBShardingBundle.createWrapperDao(bundle, OrderDao.class);
+
+        final String customer = "customer1";
+
+        Order order = Order.builder()
+                .customerId(customer)
+                .build();
+
+        OrderItem itemA = OrderItem.builder()
+                .order(order)
+                .name("Item A")
+                .build();
+        OrderItem itemB = OrderItem.builder()
+                .order(order)
+                .name("Item B")
+                .build();
+
+        order.setItems(ImmutableList.of(itemA, itemB));
+
+        Order saveResult = dao.forParent(customer).save(order);
+
+        long saveId = saveResult.getId();
+
+        Order result = dao.forParent(customer).get(saveId);
+
+        assertEquals(saveResult.getId(), result.getId());
+        assertEquals(saveResult.getId(), result.getId());
+    }
+
+}

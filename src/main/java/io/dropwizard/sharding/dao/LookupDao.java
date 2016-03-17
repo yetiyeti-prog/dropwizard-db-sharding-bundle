@@ -195,14 +195,17 @@ public class LookupDao<T> {
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
     }
 
-    public T update(String id, Function<T, T> updater) {
+    public boolean update(String id, Function<Optional<T>, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, id);
         LookupDaoPriv dao = daos.get(shardId);
         try {
-            return Transactions.<T, String, T>execute(dao.sessionFactory, true, dao::get, id, entity -> {
-                T newEntity = updater.apply(entity);
+            return Transactions.<T, String, Boolean>execute(dao.sessionFactory, true, dao::get, id, entity -> {
+                T newEntity = updater.apply(Optional.ofNullable(entity));
+                if(null == newEntity) {
+                    return false;
+                }
                 dao.update(newEntity);
-                return newEntity;
+                return true;
             });
         } catch (Exception e) {
             throw new RuntimeException("Error updating entity: " + id, e);

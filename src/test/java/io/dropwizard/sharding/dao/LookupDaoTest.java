@@ -102,13 +102,29 @@ public class LookupDaoTest {
         result = lookupDao.get("testId");
         assertEquals("Some New Text", result.get().getText());
 
-        lookupDao.update("testId", entity -> {
-            entity.setText("Updated text");
-            return entity;
+        boolean updateStatus = lookupDao.update("testId", entity -> {
+            if(entity.isPresent()) {
+                TestEntity e = entity.get();
+                e.setText("Updated text");
+                return e;
+            }
+            return null;
         });
 
+        assertTrue(updateStatus);
         result = lookupDao.get("testId");
         assertEquals("Updated text", result.get().getText());
+
+        updateStatus = lookupDao.update("testIdxxx", entity -> {
+            if(entity.isPresent()) {
+                TestEntity e = entity.get();
+                e.setText("Updated text");
+                return e;
+            }
+            return null;
+        });
+
+        assertFalse(updateStatus);
     }
 
     @Test

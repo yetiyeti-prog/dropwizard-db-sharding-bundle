@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import io.dropwizard.sharding.DBShardingBundle;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
+import io.dropwizard.sharding.dao.RelationalDao;
 import io.dropwizard.sharding.dao.WrapperDao;
 import io.dropwizard.sharding.dao.testdata.OrderDao;
 import io.dropwizard.sharding.dao.testdata.entities.Order;
@@ -33,12 +34,18 @@ import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import lombok.val;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -96,8 +103,10 @@ public class DBShardingBundleTest {
     }
 
     @Test
-    public void testBundle() {
+    public void testBundle() throws Exception {
         WrapperDao<Order, OrderDao> dao = DBShardingBundle.createWrapperDao(bundle, OrderDao.class);
+
+        RelationalDao<Order> rDao = DBShardingBundle.createRelatedObjectDao(bundle, Order.class);
 
         final String customer = "customer1";
 
@@ -124,6 +133,31 @@ public class DBShardingBundleTest {
 
         assertEquals(saveResult.getId(), result.getId());
         assertEquals(saveResult.getId(), result.getId());
+
+        Optional<Order> newOrder = rDao.save("customer1", order);
+
+        assertTrue(newOrder.isPresent());
+
+        long generatedId = newOrder.get().getId();
+
+        Optional<Order> checkOrder = rDao.get("customer1", generatedId);
+
+        assertTrue(checkOrder.isPresent());
+
+        assertEquals(newOrder.get().getId(), checkOrder.get().getId());
+
+        Map<String, Object> blah = Maps.newHashMap();
+
+        rDao.get("customer1", generatedId, foundOrder -> {
+            if(null == foundOrder) {
+                return Collections.emptyList();
+            }
+            List<OrderItem> itemList = foundOrder.getItems();
+            blah.put("count", itemList.size());
+            return itemList;
+        });
+
+        assertEquals(2, blah.get("count"));
     }
 
 }

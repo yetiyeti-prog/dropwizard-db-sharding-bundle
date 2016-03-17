@@ -80,6 +80,11 @@ public class LookupDao<T> {
             return persist(entity);
         }
 
+        void update(T entity) {
+            currentSession().evict(entity); //Detach .. otherwise update is a no-op
+            currentSession().update(entity);
+        }
+
         /**
          * Run a query inside this shard and return the matching list.
          * @param criteria selection criteria to be applied.
@@ -188,6 +193,20 @@ public class LookupDao<T> {
         log.debug("Saving entity of type {} with key {} to shard {}", entityClass.getSimpleName(), key, shardId);
         LookupDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
+    }
+
+    public T update(String id, Function<T, T> updater) {
+        int shardId = ShardCalculator.shardId(shardManager, id);
+        LookupDaoPriv dao = daos.get(shardId);
+        try {
+            return Transactions.<T, String, T>execute(dao.sessionFactory, true, dao::get, id, entity -> {
+                T newEntity = updater.apply(entity);
+                dao.update(newEntity);
+                return newEntity;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity: " + id, e);
+        }
     }
 
     /**

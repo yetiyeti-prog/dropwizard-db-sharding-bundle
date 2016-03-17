@@ -101,6 +101,14 @@ public class LookupDaoTest {
         lookupDao.save(testEntity);
         result = lookupDao.get("testId");
         assertEquals("Some New Text", result.get().getText());
+
+        lookupDao.update("testId", entity -> {
+            entity.setText("Updated text");
+            return entity;
+        });
+
+        result = lookupDao.get("testId");
+        assertEquals("Updated text", result.get().getText());
     }
 
     @Test

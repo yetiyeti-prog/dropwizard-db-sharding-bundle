@@ -35,6 +35,8 @@ import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import lombok.val;
+import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Restrictions;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -108,10 +110,13 @@ public class DBShardingBundleTest {
 
         RelationalDao<Order> rDao = DBShardingBundle.createRelatedObjectDao(bundle, Order.class);
 
+        RelationalDao<OrderItem> orderItemDao = DBShardingBundle.createRelatedObjectDao(bundle, OrderItem.class);
+
         final String customer = "customer1";
 
         Order order = Order.builder()
                 .customerId(customer)
+                .orderId("OD00001")
                 .amount(100)
                 .build();
 
@@ -173,6 +178,12 @@ public class DBShardingBundleTest {
         });
 
         assertEquals(2, blah.get("count"));
+
+        List<OrderItem> orderItems = orderItemDao.select("customer1",
+                                                        DetachedCriteria.forClass(OrderItem.class)
+                                                            .createAlias("order", "o")
+                                                            .add(Restrictions.eq("o.orderId", "OD00001")));
+        assertEquals(2, orderItems.size());
     }
 
 }

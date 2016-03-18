@@ -38,6 +38,9 @@ public class Order {
     @Column(name = "id")
     private long id;
 
+    @Column(name = "order_ext_id", unique = true)
+    private String orderId;
+
     @Column(name = "customer_id", nullable = false)
     private String customerId;
 

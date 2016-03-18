@@ -69,6 +69,11 @@ public class RelationalDao<T> {
             return persist(entity);
         }
 
+        void update(T entity) {
+            currentSession().evict(entity); //Detach .. otherwise update is a no-op
+            currentSession().update(entity);
+        }
+
         List<T> select(DetachedCriteria criteria) {
             return list(criteria.getExecutableCriteria(currentSession()));
         }
@@ -130,6 +135,23 @@ public class RelationalDao<T> {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
         LookupDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
+    }
+
+    public boolean update(String parentKey, Object id, Function<Optional<T>, T> updater) {
+        int shardId = ShardCalculator.shardId(shardManager, parentKey);
+        LookupDaoPriv dao = daos.get(shardId);
+        try {
+            return Transactions.<T, Object, Boolean>execute(dao.sessionFactory, true, dao::get, id, entity -> {
+                T newEntity = updater.apply(Optional.ofNullable(entity));
+                if(null == newEntity) {
+                    return false;
+                }
+                dao.update(newEntity);
+                return true;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity: " + id, e);
+        }
     }
 
     public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {

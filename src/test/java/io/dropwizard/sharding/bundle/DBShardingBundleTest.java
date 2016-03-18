@@ -112,6 +112,7 @@ public class DBShardingBundleTest {
 
         Order order = Order.builder()
                 .customerId(customer)
+                .amount(100)
                 .build();
 
         OrderItem itemA = OrderItem.builder()
@@ -141,6 +142,20 @@ public class DBShardingBundleTest {
         long generatedId = newOrder.get().getId();
 
         Optional<Order> checkOrder = rDao.get("customer1", generatedId);
+
+        assertEquals(100, checkOrder.get().getAmount());
+
+        rDao.update("customer1", saveId, orderOptional -> {
+            if(orderOptional.isPresent()) {
+                Order foundOrder = orderOptional.get();
+                foundOrder.setAmount(200);
+                return foundOrder;
+            }
+            return null;
+        });
+
+        Optional<Order> modifiedOrder = rDao.get("customer1", saveId);
+        assertEquals(200, modifiedOrder.get().getAmount());
 
         assertTrue(checkOrder.isPresent());
 

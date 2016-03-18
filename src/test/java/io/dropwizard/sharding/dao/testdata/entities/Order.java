@@ -45,4 +45,7 @@ public class Order {
     @Cascade(CascadeType.ALL)
     private List<OrderItem> items;
 
+    @Column(name = "amount")
+    private int amount;
+
 }

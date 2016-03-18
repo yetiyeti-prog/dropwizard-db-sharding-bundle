@@ -22,7 +22,9 @@ import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.Transactions;
 import io.dropwizard.hibernate.AbstractDAO;
+import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
@@ -74,8 +76,11 @@ public class RelationalDao<T> {
             currentSession().update(entity);
         }
 
-        List<T> select(DetachedCriteria criteria) {
-            return list(criteria.getExecutableCriteria(currentSession()));
+        List<T> select(SelectParamPriv selectParam) {
+            val criteria = selectParam.criteria.getExecutableCriteria(currentSession());
+            criteria.setFirstResult(selectParam.start);
+            criteria.setMaxResults(selectParam.numRows);
+            return list(criteria);
         }
 
         long count(DetachedCriteria criteria) {
@@ -84,6 +89,13 @@ public class RelationalDao<T> {
                             .uniqueResult();
         }
 
+    }
+
+    @Builder
+    private static class SelectParamPriv {
+        DetachedCriteria criteria;
+        int start;
+        int numRows;
     }
 
     private List<LookupDaoPriv> daos;
@@ -155,13 +167,26 @@ public class RelationalDao<T> {
     }
 
     public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
+        return select(parentKey, criteria, 0, 10);
+    }
+
+    public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
         return select(parentKey, criteria, t-> t);
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, Function<List<T>, U> handler) throws Exception {
+        return select(parentKey, criteria, 0, 10, handler);
+    }
+
+    public<U> U select(String parentKey, DetachedCriteria criteria, int first, int numResults, Function<List<T>, U> handler) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
         LookupDaoPriv dao = daos.get(shardId);
-        return Transactions.execute(dao.sessionFactory, true, dao::select, criteria, handler);
+        SelectParamPriv selectParam = SelectParamPriv.<T>builder()
+                .criteria(criteria)
+                .start(first)
+                .numRows(numResults)
+                .build();
+        return Transactions.execute(dao.sessionFactory, true, dao::select, selectParam, handler);
     }
 
     public long count(String parentKey, DetachedCriteria criteria) throws Exception {
@@ -180,7 +205,12 @@ public class RelationalDao<T> {
     public List<T> scatterGather(DetachedCriteria criteria) {
         return daos.stream().map(dao -> {
             try {
-                return Transactions.execute(dao.sessionFactory, true, dao::select, criteria);
+                SelectParamPriv selectParam = SelectParamPriv.<T>builder()
+                        .criteria(criteria)
+                        .start(0)
+                        .numRows(10)
+                        .build();
+                return Transactions.execute(dao.sessionFactory, true, dao::select, selectParam);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

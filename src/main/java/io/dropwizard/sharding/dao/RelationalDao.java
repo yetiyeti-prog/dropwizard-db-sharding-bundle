@@ -71,8 +71,8 @@ public class RelationalDao<T> {
             return persist(entity);
         }
 
-        void update(T entity) {
-            currentSession().evict(entity); //Detach .. otherwise update is a no-op
+        void update(T oldEntity, T entity) {
+            currentSession().evict(oldEntity); //Detach .. otherwise update is a no-op
             currentSession().update(entity);
         }
 
@@ -149,20 +149,52 @@ public class RelationalDao<T> {
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
     }
 
-    public boolean update(String parentKey, Object id, Function<Optional<T>, T> updater) {
+    public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
         LookupDaoPriv dao = daos.get(shardId);
         try {
             return Transactions.<T, Object, Boolean>execute(dao.sessionFactory, true, dao::get, id, entity -> {
-                T newEntity = updater.apply(Optional.ofNullable(entity));
+                if(null == entity) {
+                    return false;
+                }
+                T newEntity = updater.apply(entity);
                 if(null == newEntity) {
                     return false;
                 }
-                dao.update(newEntity);
+                dao.update(entity, newEntity);
                 return true;
             });
         } catch (Exception e) {
             throw new RuntimeException("Error updating entity: " + id, e);
+        }
+    }
+
+    public boolean update(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
+        int shardId = ShardCalculator.shardId(shardManager, parentKey);
+        LookupDaoPriv dao = daos.get(shardId);
+        try {
+            SelectParamPriv selectParam = SelectParamPriv.builder()
+                                                .criteria(criteria)
+                                                .start(0)
+                                                .numRows(1)
+                                                .build();
+            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(dao.sessionFactory, true, dao::select, selectParam, entityList -> {
+                if(entityList == null || entityList.isEmpty()) {
+                    return false;
+                }
+                T oldEntity = entityList.get(0);
+                if(null == oldEntity) {
+                    return false;
+                }
+                T newEntity = updater.apply(oldEntity);
+                if(null == newEntity) {
+                    return false;
+                }
+                dao.update(oldEntity, newEntity);
+                return true;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
         }
     }
 

@@ -150,13 +150,9 @@ public class DBShardingBundleTest {
 
         assertEquals(100, checkOrder.get().getAmount());
 
-        rDao.update("customer1", saveId, orderOptional -> {
-            if(orderOptional.isPresent()) {
-                Order foundOrder = orderOptional.get();
-                foundOrder.setAmount(200);
-                return foundOrder;
-            }
-            return null;
+        rDao.update("customer1", saveId, foundOrder -> {
+            foundOrder.setAmount(200);
+            return foundOrder;
         });
 
         Optional<Order> modifiedOrder = rDao.get("customer1", saveId);
@@ -184,6 +180,22 @@ public class DBShardingBundleTest {
                                                             .createAlias("order", "o")
                                                             .add(Restrictions.eq("o.orderId", "OD00001")));
         assertEquals(2, orderItems.size());
+        orderItemDao.update("customer1",
+                DetachedCriteria.forClass(OrderItem.class)
+                        .createAlias("order", "o")
+                        .add(Restrictions.eq("o.orderId", "OD00001")),
+                item -> OrderItem.builder()
+                        .id(item.getId())
+                        .order(item.getOrder())
+                        .name("Item AA")
+                        .build());
+
+        orderItems = orderItemDao.select("customer1",
+                DetachedCriteria.forClass(OrderItem.class)
+                        .createAlias("order", "o")
+                        .add(Restrictions.eq("o.orderId", "OD00001")));
+        assertEquals(2, orderItems.size());
+        assertEquals("Item AA", orderItems.get(0).getName());
     }
 
 }

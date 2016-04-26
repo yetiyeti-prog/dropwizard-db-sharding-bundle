@@ -198,6 +198,37 @@ public class RelationalDao<T> {
         }
     }
 
+    public boolean updateAll(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
+        int shardId = ShardCalculator.shardId(shardManager, parentKey);
+        LookupDaoPriv dao = daos.get(shardId);
+        try {
+            SelectParamPriv selectParam = SelectParamPriv.builder()
+                    .criteria(criteria)
+                    .start(0)
+                    .numRows(1)
+                    .build();
+            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(dao.sessionFactory, true, dao::select, selectParam, entityList -> {
+                if(entityList == null || entityList.isEmpty()) {
+                    return false;
+                }
+                for(T oldEntity: entityList) {
+                    if (null == oldEntity) {
+                        return false;
+                    }
+                    T newEntity = updater.apply(oldEntity);
+                    if (null == newEntity) {
+                        return false;
+                    }
+                    dao.update(oldEntity, newEntity);
+                }
+                return true;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
+        }
+    }
+
+
     public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
         return select(parentKey, criteria, 0, 10);
     }

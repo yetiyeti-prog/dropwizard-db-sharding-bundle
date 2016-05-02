@@ -23,7 +23,7 @@ The project dependencies are:
 <dependency>
     <groupId>io.dropwizard.sharding</groupId>
     <artifactId>db-sharding-bundle</artifactId>
-    <version>0.9.2-SNAPSHOT</version>
+    <version>0.9.2</version>
 </dependency>
 ```
 

@@ -19,6 +19,7 @@ package io.dropwizard.sharding.utils;
 
 import org.hibernate.*;
 import org.hibernate.context.internal.ManagedSessionContext;
+import org.hibernate.resource.transaction.spi.TransactionStatus;
 
 /**
  * A transaction handler utility class
@@ -95,14 +96,14 @@ public class TransactionHandler {
 
     private void rollbackTransaction() {
         final Transaction txn = session.getTransaction();
-        if (txn != null && txn.isActive()) {
+        if (txn != null && txn.getStatus() == TransactionStatus.ACTIVE) {
             txn.rollback();
         }
     }
 
     private void commitTransaction() {
         final Transaction txn = session.getTransaction();
-        if (txn != null && txn.isActive()) {
+        if (txn != null && txn.getStatus() == TransactionStatus.ACTIVE) {
             txn.commit();
         }
     }

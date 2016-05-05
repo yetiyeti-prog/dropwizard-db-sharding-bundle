@@ -234,7 +234,7 @@ public class RelationalDao<T> {
     }
 
     public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
-        return select(parentKey, criteria, t-> t);
+        return select(parentKey, criteria, first, numResults, t-> t);
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, Function<List<T>, U> handler) throws Exception {

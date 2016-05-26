@@ -18,17 +18,18 @@
 package io.dropwizard.sharding.utils;
 
 import io.dropwizard.sharding.sharding.ShardManager;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Utility class for calculating shards.
  */
+@Slf4j
 public class ShardCalculator {
     private ShardCalculator() {
     }
 
     public static int shardId(ShardManager shardManager, String key) {
         int bucketId = BucketExtractors.hashed(key);
-        System.out.println("BUCKET = " + bucketId);
         return shardManager.shardForBucket(bucketId);
     }
 }

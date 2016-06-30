@@ -40,7 +40,7 @@ def getBuckets(min_bucket,max_bucket,num_bucket):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-k",   "--key", action='append', required=True,  help="comma separated keys")
+parser.add_argument("-k",   "--key", action='append', required=True,  help="A key to search for. Can be specified multiple times for multiple keys.")
 parser.add_argument("-s",   "--num_bucket", type=int , default=NUM_BUCKETS, required=False, help="total number of shards")
 parser.add_argument("-min", "--min_bucket", type=int , default=MIN_BUCKET,  required=False, help="bucket range min value")
 parser.add_argument("-max", "--max_bucket",  type=int , default=MAX_BUCKET,  required=False, help="bucket range max value")

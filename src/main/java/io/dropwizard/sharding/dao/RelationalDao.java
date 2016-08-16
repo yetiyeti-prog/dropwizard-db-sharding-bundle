@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RelationalDao<T> {
 
-    private final class LookupDaoPriv extends AbstractDAO<T> {
+    private final class RelationalDaoPriv extends AbstractDAO<T> {
 
         private final SessionFactory sessionFactory;
 
@@ -55,7 +55,7 @@ public class RelationalDao<T> {
          *
          * @param sessionFactory a session provider
          */
-        public LookupDaoPriv(SessionFactory sessionFactory) {
+        public RelationalDaoPriv(SessionFactory sessionFactory) {
             super(sessionFactory);
             this.sessionFactory = sessionFactory;
         }
@@ -98,7 +98,7 @@ public class RelationalDao<T> {
         int numRows;
     }
 
-    private List<LookupDaoPriv> daos;
+    private List<RelationalDaoPriv> daos;
     private final Class<T> entityClass;
     private final ShardManager shardManager;
     private final Field keyField;
@@ -111,7 +111,7 @@ public class RelationalDao<T> {
      */
     public RelationalDao(List<SessionFactory> sessionFactories, Class<T> entityClass, ShardManager shardManager) {
         this.shardManager = shardManager;
-        this.daos = sessionFactories.stream().map(LookupDaoPriv::new).collect(Collectors.toList());
+        this.daos = sessionFactories.stream().map(RelationalDaoPriv::new).collect(Collectors.toList());
         this.entityClass = entityClass;
 
         Field fields[] = FieldUtils.getFieldsWithAnnotation(entityClass, Id.class);
@@ -135,7 +135,7 @@ public class RelationalDao<T> {
 
     public<U> U get(String parentKey, Object key, Function<T, U> function) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.<T, Object, U>execute(dao.sessionFactory, true, dao::get, key, function);
     }
 
@@ -145,13 +145,13 @@ public class RelationalDao<T> {
 
     public <U> U save(String parentKey, T entity, Function<T, U> handler) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
     }
 
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         try {
             return Transactions.<T, Object, Boolean>execute(dao.sessionFactory, true, dao::get, id, entity -> {
                 if(null == entity) {
@@ -171,7 +171,7 @@ public class RelationalDao<T> {
 
     public boolean update(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         try {
             SelectParamPriv selectParam = SelectParamPriv.builder()
                                                 .criteria(criteria)
@@ -200,7 +200,7 @@ public class RelationalDao<T> {
 
     public boolean updateAll(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         try {
             SelectParamPriv selectParam = SelectParamPriv.builder()
                     .criteria(criteria)
@@ -243,7 +243,7 @@ public class RelationalDao<T> {
 
     public<U> U select(String parentKey, DetachedCriteria criteria, int first, int numResults, Function<List<T>, U> handler) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         SelectParamPriv selectParam = SelectParamPriv.<T>builder()
                 .criteria(criteria)
                 .start(first)
@@ -254,13 +254,13 @@ public class RelationalDao<T> {
 
     public long count(String parentKey, DetachedCriteria criteria) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.<Long, DetachedCriteria>execute(dao.sessionFactory, true, dao::count, criteria);
     }
 
     public boolean exists(String parentKey, Object key) throws Exception {
         int shardId = ShardCalculator.shardId(shardManager, parentKey);
-        LookupDaoPriv dao = daos.get(shardId);
+        RelationalDaoPriv dao = daos.get(shardId);
         Optional<T> result = Transactions.<T, Object>executeAndResolve(dao.sessionFactory, true, dao::get, key);
         return result.isPresent();
     }

@@ -17,6 +17,7 @@
 
 package io.dropwizard.sharding.dao;
 
+import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.ShardedTransaction;
 import io.dropwizard.sharding.utils.TransactionHandler;
@@ -46,6 +47,7 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> {
 
     private List<DaoType> daos;
     private final ShardManager shardManager;
+    private final BucketIdExtractor<String> bucketIdExtractor;
 
     /**
      * Create a relational DAO.
@@ -53,8 +55,8 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> {
      * @param daoClass Class for the dao.
      * @param shardManager The {@link ShardManager} used to manage the bucket to shard mapping.
      */
-    public WrapperDao(List<SessionFactory> sessionFactories, Class<DaoType> daoClass, ShardManager shardManager) {
-        this(sessionFactories, daoClass, shardManager, null, null);
+    public WrapperDao(List<SessionFactory> sessionFactories, Class<DaoType> daoClass, ShardManager shardManager, BucketIdExtractor<String> bucketIdExtractor) {
+        this(sessionFactories, daoClass, shardManager, bucketIdExtractor, null, null);
     }
 
     /**
@@ -65,9 +67,12 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> {
      * @param extraConstructorParamClasses Class names for constructor parameters to the DAO other than SessionFactory
      * @param extraConstructorParamObjects Objects for constructor parameters to the DAO other than SessionFactory
      */
-    public WrapperDao(List<SessionFactory> sessionFactories, Class<DaoType> daoClass, ShardManager shardManager,
+    public WrapperDao(List<SessionFactory> sessionFactories, Class<DaoType> daoClass,
+                      ShardManager shardManager,
+                      BucketIdExtractor<String> bucketIdExtractor,
                       Class[] extraConstructorParamClasses, Class[] extraConstructorParamObjects) {
         this.shardManager = shardManager;
+        this.bucketIdExtractor = bucketIdExtractor;
         this.daos = sessionFactories.stream().map((SessionFactory sessionFactory) -> {
             Enhancer enhancer = new Enhancer();
             enhancer.setUseFactory(false);
@@ -101,7 +106,7 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> {
      * @return
      */
     public DaoType forParent(final String parentKey) {
-        return daos.get(ShardCalculator.shardId(shardManager, parentKey));
+        return daos.get(ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey));
     }
 
     @SuppressWarnings("unchecked")

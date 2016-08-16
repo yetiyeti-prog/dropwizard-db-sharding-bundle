@@ -24,6 +24,7 @@ import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.RelationalDao;
 import io.dropwizard.sharding.dao.LookupDao;
 import io.dropwizard.sharding.dao.WrapperDao;
+import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
@@ -33,6 +34,7 @@ import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.hibernate.SessionFactoryFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
 import org.hibernate.SessionFactory;
@@ -103,23 +105,44 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
     public static <EntityType, T extends Configuration>
     LookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
-        return new LookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager);
+        return new LookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+    }
+
+    public static <EntityType, T extends Configuration>
+    LookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle,
+                                                Class<EntityType> clazz,
+                                                BucketIdExtractor<String> bucketIdExtractor) {
+        return new LookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, bucketIdExtractor);
     }
 
     public static <EntityType, T extends Configuration>
     RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
-        return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager);
+        return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+    }
+
+    public static <EntityType, T extends Configuration>
+    RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle,
+                                                     Class<EntityType> clazz,
+                                                     BucketIdExtractor<String> bucketIdExtractor) {
+        return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, bucketIdExtractor);
     }
 
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle, Class<DaoType> daoTypeClass) {
-        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager);
+        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+    }
+
+    public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
+    WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle,
+                                                     Class<DaoType> daoTypeClass,
+                                                     BucketIdExtractor<String> bucketIdExtractor) {
+        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, bucketIdExtractor);
     }
 
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle, Class<DaoType> daoTypeClass,
                                                      Class[] extraConstructorParamClasses, Class[] extraConstructorParamObjects) {
-        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager,
+        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(),
                 extraConstructorParamClasses, extraConstructorParamObjects);
     }
 }

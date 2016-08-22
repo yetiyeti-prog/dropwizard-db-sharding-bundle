@@ -45,15 +45,25 @@ public class Transactions {
     }
 
     public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) throws Exception {
+        return execute(sessionFactory, readOnly, function, arg, handler, true);
+    }
+
+    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler, boolean completeTransaction) throws Exception {
         TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, readOnly);
-        transactionHandler.beforeStart();
+        if(completeTransaction) {
+            transactionHandler.beforeStart();
+        }
         try {
             T result = function.apply(arg);
             V returnValue = handler.apply(result);
-            transactionHandler.afterEnd();
+            if(completeTransaction) {
+                transactionHandler.afterEnd();
+            }
             return returnValue;
         } catch (Exception e) {
-            transactionHandler.onError();
+            if(completeTransaction) {
+                transactionHandler.onError();
+            }
             throw e;
         }
     }

@@ -18,11 +18,11 @@
 package io.dropwizard.sharding.dao;
 
 import com.google.common.base.Preconditions;
+import io.dropwizard.hibernate.AbstractDAO;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.Transactions;
-import io.dropwizard.hibernate.AbstractDAO;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -151,6 +151,11 @@ public class RelationalDao<T> {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
+    }
+
+    <U> void save(LookupDao.LockedContext<U> context, T entity) throws Exception {
+        RelationalDaoPriv dao = daos.get(context.getShardId());
+        Transactions.execute(context.getSessionFactory(), false, dao::save, entity, t->t, false);
     }
 
     public boolean update(String parentKey, Object id, Function<T, T> updater) {

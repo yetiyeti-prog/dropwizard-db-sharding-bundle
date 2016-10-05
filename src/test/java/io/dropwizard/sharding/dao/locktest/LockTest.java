@@ -43,10 +43,8 @@ public class LockTest {
 
     private SessionFactory buildSessionFactory(String dbName) {
         Configuration configuration = new Configuration();
-        configuration.setProperty("hibernate.dialect",
-                "org.hibernate.dialect.H2Dialect");
-        configuration.setProperty("hibernate.connection.driver_class",
-                "org.h2.Driver");
+        configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+        configuration.setProperty("hibernate.connection.driver_class", "org.h2.Driver");
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
@@ -81,19 +79,15 @@ public class LockTest {
 
         lookupDao.lockedExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
-                .save(relationDao, parent -> {
-                    SomeOtherObject result = SomeOtherObject.builder()
-                            .my_id(parent.getMyId())
-                            .value("Hello")
-                            .build();
-                    parent.setName("Changed");
-                    return result;
-                })
+                .save(relationDao, parent -> SomeOtherObject.builder()
+                        .my_id(parent.getMyId())
+                        .value("Hello")
+                        .build())
                 .mutate(parent -> parent.setName("Changed"))
                 .execute();
 
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
-        System.out.println(lookupDao.get("0").get().getName());
+        Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
         System.out.println(relationDao.get("0", 1L).get());
     }
 

@@ -103,7 +103,7 @@ public class RelationalDao<T> {
     private final Class<T> entityClass;
     private final ShardManager shardManager;
     private final BucketIdExtractor<String> bucketIdExtractor;
-    private final Field keyField;
+    protected final Field keyField;
 
     /**
      * Create a relational DAO.
@@ -275,7 +275,7 @@ public class RelationalDao<T> {
     }
 
     public List<T> scatterGather(DetachedCriteria criteria) {
-        return daos.stream().map(dao -> {
+        return daos.stream().parallel().map(dao -> {
             try {
                 SelectParamPriv selectParam = SelectParamPriv.<T>builder()
                         .criteria(criteria)

@@ -20,10 +20,10 @@ package io.dropwizard.sharding;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.dropwizard.sharding.caching.LookupCacheManager;
+import io.dropwizard.sharding.caching.RelationalCacheManager;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.dropwizard.sharding.dao.RelationalDao;
-import io.dropwizard.sharding.dao.LookupDao;
-import io.dropwizard.sharding.dao.WrapperDao;
+import io.dropwizard.sharding.dao.*;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.Configuration;
@@ -109,6 +109,11 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     }
 
     public static <EntityType, T extends Configuration>
+    CacheableLookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, LookupCacheManager<EntityType> cacheManager) {
+        return new CacheableLookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
+    }
+
+    public static <EntityType, T extends Configuration>
     LookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle,
                                                 Class<EntityType> clazz,
                                                 BucketIdExtractor<String> bucketIdExtractor) {
@@ -119,6 +124,13 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
         return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
     }
+
+
+    public static <EntityType, T extends Configuration>
+    CacheableRelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, RelationalCacheManager<EntityType> cacheManager) {
+        return new CacheableRelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
+    }
+
 
     public static <EntityType, T extends Configuration>
     RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle,

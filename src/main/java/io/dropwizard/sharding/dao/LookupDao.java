@@ -30,6 +30,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.hibernate.CacheMode;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
@@ -119,10 +120,10 @@ public class LookupDao<T> {
     private final Class<T> entityClass;
     private final ShardManager shardManager;
     private final BucketIdExtractor<String> bucketIdExtractor;
-    private final Field keyField;
+    protected final Field keyField;
 
     /**
-     * Creates a new sharded DAO. The number of managed shards and buckeing is controlled by the {@link ShardManager}.
+     * Creates a new sharded DAO. The number of managed shards and bucketing is controlled by the {@link ShardManager}.
      *
      * @param sessionFactories a session provider for each shard
      */
@@ -334,7 +335,7 @@ public class LookupDao<T> {
             transactionHandler.beforeStart();
             try {
                 T result = function.apply(key);
-                operations.stream()
+                operations
                         .forEach(operation -> operation.apply(result));
                 transactionHandler.afterEnd();
             } catch (Exception e) {

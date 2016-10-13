@@ -293,4 +293,7 @@ public class RelationalDao<T> {
         }).flatMap(Collection::stream).collect(Collectors.toList());
     }
 
+    protected Field getKeyField() {
+        return this.keyField;
+    }
 }

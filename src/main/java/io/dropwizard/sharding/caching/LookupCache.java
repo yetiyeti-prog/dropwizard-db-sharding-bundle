@@ -18,7 +18,7 @@ package io.dropwizard.sharding.caching;
 
 
 /**
- * A simple cache manager interface which allows plugging in any caching framework or infrastructure to enable
+ * A simple cache interface which allows plugging in any caching framework or infrastructure to enable
  * write through caching
  */
 public interface LookupCache<V> {

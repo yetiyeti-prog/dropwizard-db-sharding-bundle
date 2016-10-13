@@ -20,12 +20,6 @@ package io.dropwizard.sharding;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.dropwizard.sharding.caching.LookupCache;
-import io.dropwizard.sharding.caching.RelationalCache;
-import io.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.dropwizard.sharding.dao.*;
-import io.dropwizard.sharding.sharding.BucketIdExtractor;
-import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.db.PooledDataSourceFactory;
@@ -34,6 +28,12 @@ import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.hibernate.SessionFactoryFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.sharding.caching.LookupCache;
+import io.dropwizard.sharding.caching.RelationalCache;
+import io.dropwizard.sharding.config.ShardedHibernateFactory;
+import io.dropwizard.sharding.dao.*;
+import io.dropwizard.sharding.sharding.BucketIdExtractor;
+import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
@@ -52,12 +52,12 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     @Getter
     private ShardManager shardManager;
 
-    public DBShardingBundle(Class<?> entity, Class<?> ...entities) {
+    public DBShardingBundle(Class<?> entity, Class<?>... entities) {
         String numShardsEnv = System.getProperty("db.shards", "2");
         int numShards = Integer.parseInt(numShardsEnv);
         shardManager = new ShardManager(numShards);
         val inEntities = ImmutableList.<Class<?>>builder().add(entity).add(entities).build();
-        for(int i = 0; i < numShards; i++) {
+        for (int i = 0; i < numShards; i++) {
             final int finalI = i;
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
                 @Override
@@ -83,7 +83,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     @SuppressWarnings("unchecked")
     public void initialize(Bootstrap<?> bootstrap) {
         //shardBundles.forEach(shardBundle -> bootstrap.addBundle((ConfiguredBundle)shardBundle));
-        shardBundles.forEach(hibernateBundle -> bootstrap.addBundle((ConfiguredBundle)hibernateBundle));
+        shardBundles.forEach(hibernateBundle -> bootstrap.addBundle((ConfiguredBundle) hibernateBundle));
     }
 
     @VisibleForTesting
@@ -96,9 +96,10 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
             }
         });
     }
+
     @VisibleForTesting
     public void initBundles(Bootstrap bootstrap) {
-        shardBundles.forEach(hibernameBundle ->initialize(bootstrap));
+        shardBundles.forEach(hibernameBundle -> initialize(bootstrap));
     }
 
     protected abstract ShardedHibernateFactory getConfig(T config);
@@ -121,6 +122,12 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     }
 
     public static <EntityType, T extends Configuration>
+    CacheableLookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, BucketIdExtractor<String> bucketIdExtractor, LookupCache<EntityType> cacheManager) {
+        return new CacheableLookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, bucketIdExtractor, cacheManager);
+    }
+
+
+    public static <EntityType, T extends Configuration>
     RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
         return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
     }
@@ -138,6 +145,12 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
                                                      BucketIdExtractor<String> bucketIdExtractor) {
         return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, bucketIdExtractor);
     }
+
+    public static <EntityType, T extends Configuration>
+    CacheableRelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, BucketIdExtractor<String> bucketIdExtractor, RelationalCache<EntityType> cacheManager) {
+        return new CacheableRelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, bucketIdExtractor, cacheManager);
+    }
+
 
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle, Class<DaoType> daoTypeClass) {

@@ -35,9 +35,9 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
 
     public CacheableRelationalDao(List<SessionFactory> sessionFactories, Class<T> entityClass,
                                   ShardManager shardManager, BucketIdExtractor<String> bucketIdExtractor,
-                                  RelationalCache<T> cacheManager) {
+                                  RelationalCache<T> cache) {
         super(sessionFactories, entityClass, shardManager, bucketIdExtractor);
-        this.cache = cacheManager;
+        this.cache = cache;
     }
 
     public Optional<T> get(String parentKey, Object key) throws Exception {

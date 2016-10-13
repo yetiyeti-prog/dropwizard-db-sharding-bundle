@@ -120,7 +120,7 @@ public class LookupDao<T> {
     private final Class<T> entityClass;
     private final ShardManager shardManager;
     private final BucketIdExtractor<String> bucketIdExtractor;
-    protected final Field keyField;
+    private final Field keyField;
 
     /**
      * Creates a new sharded DAO. The number of managed shards and bucketing is controlled by the {@link ShardManager}.
@@ -269,6 +269,9 @@ public class LookupDao<T> {
         }).flatMap(Collection::stream).collect(Collectors.toList());
     }
 
+    protected Field getKeyField() {
+        return this.keyField;
+    }
 
     /**
      * A context for a shard

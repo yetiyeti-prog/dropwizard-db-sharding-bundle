@@ -80,7 +80,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
     public Optional<T> save(T entity) throws Exception {
         T savedEntity = super.save(entity, t -> t);
         if(savedEntity != null) {
-            final String key = keyField.get(entity).toString();
+            final String key = getKeyField().get(entity).toString();
             cache.put(key, entity);
         }
         return Optional.ofNullable(savedEntity);

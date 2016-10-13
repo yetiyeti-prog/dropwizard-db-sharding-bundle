@@ -54,7 +54,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
     public Optional<T> save(String parentKey, T entity) throws Exception {
         T savedEntity = super.save(parentKey, entity, t -> t);
         if(savedEntity != null) {
-            final String key = keyField.get(entity).toString();
+            final String key = getKeyField().get(entity).toString();
             cache.put(parentKey, key, entity);
         }
         return Optional.ofNullable(savedEntity);

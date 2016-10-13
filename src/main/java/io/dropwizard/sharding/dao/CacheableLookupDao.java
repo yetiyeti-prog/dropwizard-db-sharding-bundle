@@ -21,6 +21,7 @@ import io.dropwizard.sharding.caching.LookupCacheManager;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.LookupKey;
 import io.dropwizard.sharding.sharding.ShardManager;
+import io.dropwizard.sharding.utils.ShardCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.SessionFactory;
 
@@ -84,6 +85,28 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
             cacheManager.put(key, entity);
         }
         return Optional.ofNullable(savedEntity);
+    }
+
+    /**
+     * Update the entity with a given id and refresh the object in the cache.
+     * Actual save will be delegated to {@link LookupDao#update(String, Function)} method.
+     * @param id Id of the entity that will be updated
+     * @return True/False
+     * @throws Exception
+     */
+    public boolean update(String id, Function<Optional<T>, T> updater) {
+        boolean result = super.update(id, updater);
+        if(result) {
+            try {
+                Optional<T> updatedEntity = super.get(id);
+                if (updatedEntity.isPresent()) {
+                    cacheManager.put(id, updatedEntity.get());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Error updating entity: " + id, e);
+            }
+        }
+        return result;
     }
 
     /**

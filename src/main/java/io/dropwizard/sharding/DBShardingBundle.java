@@ -20,8 +20,8 @@ package io.dropwizard.sharding;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.dropwizard.sharding.caching.LookupCacheManager;
-import io.dropwizard.sharding.caching.RelationalCacheManager;
+import io.dropwizard.sharding.caching.LookupCache;
+import io.dropwizard.sharding.caching.RelationalCache;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.*;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
@@ -109,7 +109,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     }
 
     public static <EntityType, T extends Configuration>
-    CacheableLookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, LookupCacheManager<EntityType> cacheManager) {
+    CacheableLookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, LookupCache<EntityType> cacheManager) {
         return new CacheableLookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
     }
 
@@ -127,7 +127,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
 
     public static <EntityType, T extends Configuration>
-    CacheableRelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, RelationalCacheManager<EntityType> cacheManager) {
+    CacheableRelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, RelationalCache<EntityType> cacheManager) {
         return new CacheableRelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
     }
 

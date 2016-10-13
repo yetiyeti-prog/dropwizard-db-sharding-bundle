@@ -21,7 +21,7 @@ package io.dropwizard.sharding.caching;
  * A simple cache manager interface which allows plugging in any caching framework or infrastructure to enable
  * write through caching
  */
-public interface LookupCacheManager<V> {
+public interface LookupCache<V> {
 
     /**
      * Write through method that will be called if cache enabled {@link io.dropwizard.sharding.dao.CacheableLookupDao#save(Object)} is used

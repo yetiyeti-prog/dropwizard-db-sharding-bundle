@@ -25,7 +25,7 @@ import java.util.List;
  * A simple cache manager interface which allows plugging in any caching framework or infrastructure to enable
  * write through caching
  */
-public interface RelationalCacheManager<V> {
+public interface RelationalCache<V> {
 
     /**
      * Write through method that will be called if cache enabled {@link io.dropwizard.sharding.dao.CacheableRelationalDao#save(String, Object)} is used

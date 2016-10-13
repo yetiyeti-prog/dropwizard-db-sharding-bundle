@@ -17,11 +17,10 @@
 
 package io.dropwizard.sharding.dao;
 
-import io.dropwizard.sharding.caching.LookupCacheManager;
+import io.dropwizard.sharding.caching.LookupCache;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.LookupKey;
 import io.dropwizard.sharding.sharding.ShardManager;
-import io.dropwizard.sharding.utils.ShardCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.SessionFactory;
 
@@ -40,14 +39,14 @@ import java.util.function.Function;
 @Slf4j
 public class CacheableLookupDao<T> extends LookupDao<T> {
 
-    private LookupCacheManager<T> cacheManager;
+    private LookupCache<T> cache;
 
     public CacheableLookupDao(List<SessionFactory> sessionFactories,
                               Class<T> entityClass,
                               ShardManager shardManager,
-                              BucketIdExtractor<String> bucketIdExtractor, LookupCacheManager<T> cacheManager) {
+                              BucketIdExtractor<String> bucketIdExtractor, LookupCache<T> cache) {
         super(sessionFactories, entityClass, shardManager, bucketIdExtractor);
-        this.cacheManager = cacheManager;
+        this.cache = cache;
     }
 
     /**
@@ -60,12 +59,12 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @throws Exception
      */
     public Optional<T> get(String key) throws Exception {
-        if(cacheManager.exists(key)) {
-            return Optional.ofNullable(cacheManager.get(key));
+        if(cache.exists(key)) {
+            return Optional.ofNullable(cache.get(key));
         }
         T entity = super.get(key, t -> t);
         if(entity != null) {
-            cacheManager.put(key, entity);
+            cache.put(key, entity);
         }
         return Optional.ofNullable(entity);
     }
@@ -82,7 +81,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
         T savedEntity = super.save(entity, t -> t);
         if(savedEntity != null) {
             final String key = keyField.get(entity).toString();
-            cacheManager.put(key, entity);
+            cache.put(key, entity);
         }
         return Optional.ofNullable(savedEntity);
     }
@@ -100,7 +99,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
             try {
                 Optional<T> updatedEntity = super.get(id);
                 if (updatedEntity.isPresent()) {
-                    cacheManager.put(id, updatedEntity.get());
+                    cache.put(id, updatedEntity.get());
                 }
             } catch (Exception e) {
                 throw new RuntimeException("Error updating entity: " + id, e);
@@ -117,12 +116,12 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @throws Exception
      */
     public boolean exists(String key) throws Exception {
-        if(cacheManager.exists(key)) {
+        if(cache.exists(key)) {
             return true;
         }
         Optional<T> entity = super.get(key);
         if(entity.isPresent()) {
-            cacheManager.put(key, entity.get());
+            cache.put(key, entity.get());
         }
         return entity.isPresent();
     }

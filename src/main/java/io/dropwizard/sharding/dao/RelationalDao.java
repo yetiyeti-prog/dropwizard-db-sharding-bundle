@@ -275,12 +275,16 @@ public class RelationalDao<T> {
     }
 
     public List<T> scatterGather(DetachedCriteria criteria) {
+        return scatterGather(criteria, 0, 10);
+    }
+
+    public List<T> scatterGather(DetachedCriteria criteria, int start, int numRows) {
         return daos.stream().map(dao -> {
             try {
                 SelectParamPriv selectParam = SelectParamPriv.<T>builder()
                         .criteria(criteria)
-                        .start(0)
-                        .numRows(10)
+                        .start(start)
+                        .numRows(numRows)
                         .build();
                 return Transactions.execute(dao.sessionFactory, true, dao::select, selectParam);
             } catch (Exception e) {

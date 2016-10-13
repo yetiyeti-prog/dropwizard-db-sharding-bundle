@@ -275,7 +275,7 @@ public class RelationalDao<T> {
     }
 
     public List<T> scatterGather(DetachedCriteria criteria) {
-        return daos.stream().parallel().map(dao -> {
+        return daos.stream().map(dao -> {
             try {
                 SelectParamPriv selectParam = SelectParamPriv.<T>builder()
                         .criteria(criteria)

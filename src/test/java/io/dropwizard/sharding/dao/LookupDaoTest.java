@@ -146,6 +146,35 @@ public class LookupDaoTest {
     }
 
     @Test
+    public void testListGetQuery() throws Exception {
+        List<String> lookupKeys = Lists.newArrayList();
+        lookupKeys.add("testId1");
+        List<TestEntity> results = lookupDao.get(lookupKeys);
+        assertTrue(results.isEmpty());
+
+        TestEntity testEntity1 = TestEntity.builder()
+                .externalId("testId1")
+                .text("Some Text 1")
+                .build();
+        lookupDao.save(testEntity1);
+        results = lookupDao.get(lookupKeys);
+        assertFalse(results.isEmpty());
+        assertEquals(1,results.size());
+        assertEquals("Some Text 1", results.get(0).getText());
+
+        TestEntity testEntity2 = TestEntity.builder()
+                .externalId("testId2")
+                .text("Some Text 2")
+                .build();
+        lookupDao.save(testEntity2);
+        lookupKeys.add("testId2");
+        results = lookupDao.get(lookupKeys);
+        assertFalse(results.isEmpty());
+        assertEquals(2,results.size());
+    }
+
+
+    @Test
     public void testSaveInParentBucket() throws Exception {
         final String phoneNumber = "9830968020";
 

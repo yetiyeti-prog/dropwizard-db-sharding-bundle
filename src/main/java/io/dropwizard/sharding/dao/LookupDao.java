@@ -39,6 +39,7 @@ import org.hibernate.criterion.Restrictions;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -268,6 +269,30 @@ public class LookupDao<T> {
             }
         }).flatMap(Collection::stream).collect(Collectors.toList());
     }
+
+    /**
+     * Queries across various shards and returns the results.
+     * <b>Note:</b> This method runs the query serially and is efficient over scatterGather and serial get of all key
+     * @param keys The list of lookup keys
+     * @return List of elements or empty if none match
+     */
+    public List<T> get(List<String> keys) {
+        Map<Integer,List<String>> lookupKeysGroupByShards = keys.stream()
+                .collect(
+                        Collectors.groupingBy(key-> ShardCalculator.shardId(shardManager, bucketIdExtractor, key),
+                                Collectors.toList()));
+
+        return lookupKeysGroupByShards.keySet().stream().map(shardId -> {
+            try {
+                DetachedCriteria criteria = DetachedCriteria.forClass(entityClass)
+                        .add(Restrictions.in(keyField.getName(),lookupKeysGroupByShards.get(shardId)));
+                return Transactions.execute(daos.get(shardId).sessionFactory, true, daos.get(shardId)::select, criteria);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).flatMap(Collection::stream).collect(Collectors.toList());
+    }
+
 
     protected Field getKeyField() {
         return this.keyField;

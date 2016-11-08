@@ -258,7 +258,6 @@ public class LookupDao<T> {
         try {
             id = keyField.get(entity).toString();
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
             throw new RuntimeException(e);
         }
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);

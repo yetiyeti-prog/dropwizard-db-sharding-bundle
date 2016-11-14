@@ -78,7 +78,7 @@ public class LockTest {
         lookupDao.save(p1);
         System.out.println(lookupDao.get("0").get().getName());
 
-        lookupDao.lockedExecutor("0")
+        lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
                         .my_id(parent.getMyId())
@@ -100,7 +100,7 @@ public class LockTest {
         lookupDao.save(p1);
         System.out.println(lookupDao.get("0").get().getName());
 
-        lookupDao.lockedExecutor("0")
+        lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> {
                     SomeOtherObject result = SomeOtherObject.builder()
@@ -124,7 +124,7 @@ public class LockTest {
                 .name("Parent 1")
                 .build();
 
-        lookupDao.lockedExecutor(p1)
+        lookupDao.saveAndGetExecutor(p1)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
                         .my_id(parent.getMyId())
@@ -151,7 +151,7 @@ public class LockTest {
                 .name("Changed")
                 .build();
 
-        lookupDao.lockedExecutor(p2)
+        lookupDao.saveAndGetExecutor(p2)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
                         .my_id(parent.getMyId())
@@ -172,7 +172,7 @@ public class LockTest {
 
         lookupDao.save(p1);
 
-        lookupDao.lockedExecutor(p1)
+        lookupDao.saveAndGetExecutor(p1)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
                         .my_id(parent.getMyId())

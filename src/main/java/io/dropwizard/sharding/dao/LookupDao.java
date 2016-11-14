@@ -247,13 +247,13 @@ public class LookupDao<T> {
         }
     }
 
-    public LockedContext<T> lockedExecutor(String id) {
+    public LockedContext<T> lockAndGetExecutor(String id) {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
         LookupDaoPriv dao = daos.get(shardId);
         return new LockedContext<>(shardId, dao.sessionFactory, dao::getLockedForWrite, id);
     }
 
-    public LockedContext<T> lockedExecutor(T entity) {
+    public LockedContext<T> saveAndGetExecutor(T entity) {
         String id;
         try {
             id = keyField.get(entity).toString();
@@ -403,6 +403,9 @@ public class LookupDao<T> {
             switch (mode) {
                 case READ:
                     result = function.apply(key);
+                    if (result == null) {
+                        throw new RuntimeException("Entity doesn't exist for key: " + key);
+                    }
                     break;
                 case INSERT:
                     result = saver.apply(entity);

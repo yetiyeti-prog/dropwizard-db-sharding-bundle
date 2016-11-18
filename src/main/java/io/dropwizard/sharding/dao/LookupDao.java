@@ -30,7 +30,6 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.hibernate.CacheMode;
 import org.hibernate.LockMode;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
@@ -248,10 +247,22 @@ public class LookupDao<T> {
         }
     }
 
-    public LockedContext<T> lockedExecutor(String id) {
+    public LockedContext<T> lockAndGetExecutor(String id) {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
         LookupDaoPriv dao = daos.get(shardId);
         return new LockedContext<>(shardId, dao.sessionFactory, dao::getLockedForWrite, id);
+    }
+
+    public LockedContext<T> saveAndGetExecutor(T entity) {
+        String id;
+        try {
+            id = keyField.get(entity).toString();
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        LookupDaoPriv dao = daos.get(shardId);
+        return new LockedContext<>(shardId, dao.sessionFactory, dao::save, entity);
     }
 
     /**
@@ -307,17 +318,32 @@ public class LookupDao<T> {
         public interface Mutator<T> {
             void mutator(T parent);
         }
+
+        enum Mode {READ, INSERT}
+
         private final int shardId;
         private final SessionFactory sessionFactory;
         private Function<String, T> function;
-        private final String key;
+        private Function<T, T> saver;
+        private T entity;
+        private String key;
         private List<Function<T, Void>> operations = Lists.newArrayList();
+        private final Mode mode;
 
         public LockedContext(int shardId, SessionFactory sessionFactory, Function<String, T> getter, String key) {
             this.shardId = shardId;
             this.sessionFactory = sessionFactory;
             this.function = getter;
             this.key = key;
+            this.mode = Mode.READ;
+        }
+
+        public LockedContext(int shardId, SessionFactory sessionFactory, Function<T, T> saver, T entity) {
+            this.shardId = shardId;
+            this.sessionFactory = sessionFactory;
+            this.saver = saver;
+            this.entity = entity;
+            this.mode = Mode.INSERT;
         }
 
         public LockedContext<T> mutate(Mutator<T> mutator) {
@@ -362,7 +388,7 @@ public class LookupDao<T> {
             TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, false);
             transactionHandler.beforeStart();
             try {
-                T result = function.apply(key);
+                T result = generateEntity();
                 operations
                         .forEach(operation -> operation.apply(result));
                 transactionHandler.afterEnd();
@@ -370,6 +396,25 @@ public class LookupDao<T> {
                 transactionHandler.onError();
                 throw e;
             }
+        }
+
+        private T generateEntity() {
+            T result = null;
+            switch (mode) {
+                case READ:
+                    result = function.apply(key);
+                    if (result == null) {
+                        throw new RuntimeException("Entity doesn't exist for key: " + key);
+                    }
+                    break;
+                case INSERT:
+                    result = saver.apply(entity);
+                    break;
+                default:
+                    break;
+
+            }
+            return result;
         }
     }
 }

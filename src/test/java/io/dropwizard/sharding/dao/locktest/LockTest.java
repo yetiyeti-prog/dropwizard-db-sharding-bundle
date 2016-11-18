@@ -26,6 +26,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,7 +78,7 @@ public class LockTest {
         lookupDao.save(p1);
         System.out.println(lookupDao.get("0").get().getName());
 
-        lookupDao.lockedExecutor("0")
+        lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
                         .my_id(parent.getMyId())
@@ -99,7 +100,7 @@ public class LockTest {
         lookupDao.save(p1);
         System.out.println(lookupDao.get("0").get().getName());
 
-        lookupDao.lockedExecutor("0")
+        lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> {
                     SomeOtherObject result = SomeOtherObject.builder()
@@ -113,4 +114,75 @@ public class LockTest {
                 .execute();
 
     }
+
+
+
+    @Test
+    public void testPersist() throws Exception {
+        SomeLookupObject p1 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Parent 1")
+                .build();
+
+        lookupDao.saveAndGetExecutor(p1)
+                .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
+                .save(relationDao, parent -> SomeOtherObject.builder()
+                        .my_id(parent.getMyId())
+                        .value("Hello")
+                        .build())
+                .mutate(parent -> parent.setName("Changed"))
+                .execute();
+
+        Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
+        Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
+    }
+
+    @Test(expected = ConstraintViolationException.class)
+    public void testPersist_alreadyExistingDifferent() throws Exception {
+        SomeLookupObject p1 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Parent 1")
+                .build();
+
+        lookupDao.save(p1);
+
+        SomeLookupObject p2 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Changed")
+                .build();
+
+        lookupDao.saveAndGetExecutor(p2)
+                .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
+                .save(relationDao, parent -> SomeOtherObject.builder()
+                        .my_id(parent.getMyId())
+                        .value("Hello")
+                        .build())
+                .execute();
+
+        Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
+        Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
+    }
+
+    @Test
+    public void testPersist_alreadyExistingSame() throws Exception {
+        SomeLookupObject p1 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Parent 1")
+                .build();
+
+        lookupDao.save(p1);
+
+        lookupDao.saveAndGetExecutor(p1)
+                .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
+                .save(relationDao, parent -> SomeOtherObject.builder()
+                        .my_id(parent.getMyId())
+                        .value("Hello")
+                        .build())
+                .mutate(parent -> parent.setName("Changed"))
+                .execute();
+
+        Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
+        Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
+    }
+
 }

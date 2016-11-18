@@ -39,7 +39,7 @@ public class SomeLookupObject {
     private long id;
 
     @LookupKey
-    @Column(name = "my_id")
+    @Column(name = "my_id", unique = true)
     private String myId;
 
     @Column

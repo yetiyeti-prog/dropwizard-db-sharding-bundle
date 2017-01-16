@@ -362,7 +362,32 @@ public class LookupDao<T> {
             return apply(parent-> {
                 try {
                     U entity = entityGenerator.apply(parent);
-                    relationalDao.save(this, entity);
+                    if(entity != null) {
+                        relationalDao.save(this, entity);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> save(RelationalDao<U> relationalDao, U entity, Function<U, U> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.save(this, entity, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+
+        public<U> LockedContext<T> update(RelationalDao<U> relationalDao, Object id, Function<U, U> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.update(this, id, handler);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

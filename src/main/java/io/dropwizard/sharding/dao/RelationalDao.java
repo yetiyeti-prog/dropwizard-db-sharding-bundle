@@ -158,11 +158,25 @@ public class RelationalDao<T> {
         Transactions.execute(context.getSessionFactory(), false, dao::save, entity, t->t, false);
     }
 
+    <U> void save(LookupDao.LockedContext<U> context, T entity, Function<T, T> handler) throws Exception {
+        RelationalDaoPriv dao = daos.get(context.getShardId());
+        Transactions.execute(context.getSessionFactory(), false, dao::save, entity, handler, false);
+    }
+
+    <U> boolean update(LookupDao.LockedContext<U> context, Object id, Function<T, T> updater) {
+        RelationalDaoPriv dao = daos.get(context.getShardId());
+        return update(context.getSessionFactory(), dao, id, updater, false);
+    }
+
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
+        return update(dao.sessionFactory, dao, id, updater, true);
+    }
+
+    private boolean update(SessionFactory daoSessionFactory, RelationalDaoPriv dao, Object id, Function<T, T> updater, boolean completeTransaction){
         try {
-            return Transactions.<T, Object, Boolean>execute(dao.sessionFactory, true, dao::get, id, entity -> {
+            return Transactions.<T, Object, Boolean>execute(daoSessionFactory, true, dao::get, id, entity -> {
                 if(null == entity) {
                     return false;
                 }
@@ -172,7 +186,7 @@ public class RelationalDao<T> {
                 }
                 dao.update(entity, newEntity);
                 return true;
-            });
+            }, completeTransaction);
         } catch (Exception e) {
             throw new RuntimeException("Error updating entity: " + id, e);
         }

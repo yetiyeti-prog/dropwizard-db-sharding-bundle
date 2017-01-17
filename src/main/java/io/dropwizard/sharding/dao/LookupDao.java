@@ -370,6 +370,29 @@ public class LookupDao<T> {
             });
         }
 
+        public<U> LockedContext<T> save(RelationalDao<U> relationalDao, U entity, Function<U, U> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.save(this, entity, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+
+        public<U> LockedContext<T> update(RelationalDao<U> relationalDao, Object id, Function<U, U> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.update(this, id, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
         public LockedContext<T> filter(Predicate<T> predicate) {
             return filter(predicate, new IllegalArgumentException("Predicate check failed"));
         }

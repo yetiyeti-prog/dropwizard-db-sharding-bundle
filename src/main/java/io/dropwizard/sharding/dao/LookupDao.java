@@ -362,9 +362,7 @@ public class LookupDao<T> {
             return apply(parent-> {
                 try {
                     U entity = entityGenerator.apply(parent);
-                    if(entity != null) {
-                        relationalDao.save(this, entity);
-                    }
+                    relationalDao.save(this, entity);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

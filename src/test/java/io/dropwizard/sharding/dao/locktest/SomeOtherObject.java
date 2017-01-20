@@ -17,9 +17,7 @@
 
 package io.dropwizard.sharding.dao.locktest;
 
-import lombok.Builder;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 import javax.persistence.*;
 
@@ -30,6 +28,7 @@ import javax.persistence.*;
 @Table(name = "some_other_data")
 @NoArgsConstructor
 @ToString
+@Data
 public class SomeOtherObject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

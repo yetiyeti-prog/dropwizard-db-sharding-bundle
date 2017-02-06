@@ -221,14 +221,14 @@ public class RelationalDao<T> {
         }
     }
 
-    public boolean updateAll(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
+    public boolean updateAll(String parentKey, int start, int numRows, DetachedCriteria criteria, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         try {
             SelectParamPriv selectParam = SelectParamPriv.builder()
                     .criteria(criteria)
-                    .start(0)
-                    .numRows(1)
+                    .start(start)
+                    .numRows(numRows)
                     .build();
             return Transactions.<List<T>, SelectParamPriv, Boolean>execute(dao.sessionFactory, true, dao::select, selectParam, entityList -> {
                 if(entityList == null || entityList.isEmpty()) {

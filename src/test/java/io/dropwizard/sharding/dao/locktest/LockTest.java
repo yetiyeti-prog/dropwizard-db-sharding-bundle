@@ -26,12 +26,15 @@ import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Test locking behavior
@@ -84,12 +87,21 @@ public class LockTest {
                         .my_id(parent.getMyId())
                         .value("Hello")
                         .build())
+                .saveAll(relationDao,
+                        parent -> IntStream.range(1,6)
+                            .mapToObj(i -> SomeOtherObject.builder()
+                                    .my_id(parent.getMyId())
+                                    .value(String.format("Hello_%s", i))
+                                    .build())
+                        .collect(Collectors.toList())
+                )
                 .mutate(parent -> parent.setName("Changed"))
                 .execute();
 
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
         System.out.println(relationDao.get("0", 1L).get());
+        Assert.assertEquals(6, relationDao.select("0", DetachedCriteria.forClass(SomeOtherObject.class)).size());
         Assert.assertEquals("Hello",relationDao.get("0", 1L).get().getValue());
     }
 

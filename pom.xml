@@ -6,10 +6,10 @@
 
     <groupId>io.dropwizard.sharding</groupId>
     <artifactId>db-sharding-bundle</artifactId>
-    <version>1.0.5-2-SNAPSHOT</version>
+    <version>1.0.6-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <dropwizard.version>1.0.5</dropwizard.version>
+        <dropwizard.version>1.0.6</dropwizard.version>
         <lombok.version>1.16.12</lombok.version>
         <cglib.version>3.2.4</cglib.version>
         <guava.version>19.0</guava.version>

@@ -18,6 +18,7 @@
 package io.dropwizard.sharding;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.dropwizard.Configuration;
@@ -38,8 +39,11 @@ import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
 import org.hibernate.SessionFactory;
+import org.reflections.Reflections;
 
+import javax.persistence.Entity;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -53,10 +57,21 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     private ShardManager shardManager;
 
     public DBShardingBundle(Class<?> entity, Class<?>... entities) {
+        val inEntities = ImmutableList.<Class<?>>builder().add(entity).add(entities).build();
+        init(inEntities);
+    }
+
+    public DBShardingBundle(String classPathPrefix) {
+        Set<Class<?>> entities = new Reflections(classPathPrefix).getTypesAnnotatedWith(Entity.class);
+        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", classPathPrefix));
+        val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
+        init(inEntities);
+    }
+
+    private void init(final ImmutableList<Class<?>> inEntities) {
         String numShardsEnv = System.getProperty("db.shards", "2");
         int numShards = Integer.parseInt(numShardsEnv);
         shardManager = new ShardManager(numShards);
-        val inEntities = ImmutableList.<Class<?>>builder().add(entity).add(entities).build();
         for (int i = 0; i < numShards; i++) {
             final int finalI = i;
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {

@@ -20,13 +20,6 @@ package io.dropwizard.sharding.bundle;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import io.dropwizard.sharding.DBShardingBundle;
-import io.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.dropwizard.sharding.dao.RelationalDao;
-import io.dropwizard.sharding.dao.WrapperDao;
-import io.dropwizard.sharding.dao.testdata.OrderDao;
-import io.dropwizard.sharding.dao.testdata.entities.Order;
-import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jersey.DropwizardResourceConfig;
@@ -34,7 +27,14 @@ import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import lombok.val;
+import io.dropwizard.sharding.DBShardingBundle;
+import io.dropwizard.sharding.config.ShardedHibernateFactory;
+import io.dropwizard.sharding.dao.RelationalDao;
+import io.dropwizard.sharding.dao.WrapperDao;
+import io.dropwizard.sharding.dao.testdata.OrderDao;
+import io.dropwizard.sharding.dao.testdata.entities.Order;
+import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
+import lombok.Getter;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
 import org.junit.Before;
@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -55,12 +54,13 @@ import static org.mockito.Mockito.when;
  * Top level test. Saves an order using custom dao to a shard belonging to a particular customer.
  * Core systems are not mocked. Uses H2 for testing.
  */
-public class DBShardingBundleTest {
-    private static class TestConfig extends Configuration {
+public abstract class DBShardingBundleBaseTest {
+    protected static class TestConfig extends Configuration {
+        @Getter
         private ShardedHibernateFactory shards = new ShardedHibernateFactory();
     }
 
-    private final TestConfig testConfig = new TestConfig();
+    protected final TestConfig testConfig = new TestConfig();
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
@@ -68,15 +68,10 @@ public class DBShardingBundleTest {
     private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
-    private DBShardingBundle<TestConfig> bundle = new DBShardingBundle<TestConfig>(Order.class, OrderItem.class) {
-        @Override
-        protected ShardedHibernateFactory getConfig(TestConfig config) {
-            return testConfig.shards;
-        }
-    };
+    protected abstract DBShardingBundle<TestConfig> getBundle();
 
     private DataSourceFactory createConfig(String dbName) {
-        Map<String,String> properties = Maps.newHashMap();
+        Map<String, String> properties = Maps.newHashMap();
         properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
         properties.put("hibernate.hbm2ddl.auto", "create");
 
@@ -92,20 +87,21 @@ public class DBShardingBundleTest {
     @Before
     public void setup() throws Exception {
         testConfig.shards.setShards(ImmutableList.of(createConfig("1"), createConfig("2")));
-
         when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
         when(environment.jersey()).thenReturn(jerseyEnvironment);
         when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
         when(environment.healthChecks()).thenReturn(healthChecks);
 
-        bundle.initialize(bootstrap);
-        bundle.initBundles(bootstrap);
-        bundle.runBundles(testConfig, environment);
-        bundle.run(testConfig, environment);
     }
 
     @Test
     public void testBundle() throws Exception {
+        DBShardingBundle<TestConfig> bundle = getBundle();
+        bundle.initialize(bootstrap);
+        bundle.initBundles(bootstrap);
+        bundle.runBundles(testConfig, environment);
+        bundle.run(testConfig, environment);
+
         WrapperDao<Order, OrderDao> dao = DBShardingBundle.createWrapperDao(bundle, OrderDao.class);
 
         RelationalDao<Order> rDao = DBShardingBundle.createRelatedObjectDao(bundle, Order.class);

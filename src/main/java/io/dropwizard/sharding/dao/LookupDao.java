@@ -421,17 +421,19 @@ public class LookupDao<T> {
             });
         }
 
-        public void execute() {
+        public T execute() {
             TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, false);
             transactionHandler.beforeStart();
             try {
                 T result = generateEntity();
                 operations
                         .forEach(operation -> operation.apply(result));
-                transactionHandler.afterEnd();
+                return result;
             } catch (Exception e) {
                 transactionHandler.onError();
                 throw e;
+            } finally {
+                transactionHandler.afterEnd();
             }
         }
 

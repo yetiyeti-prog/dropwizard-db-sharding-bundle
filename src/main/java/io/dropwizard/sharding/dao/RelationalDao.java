@@ -72,6 +72,13 @@ public class RelationalDao<T> {
             return persist(entity);
         }
 
+        boolean saveAll(Collection<T> entities) {
+            for (T entity : entities) {
+                persist(entity);
+            }
+            return true;
+        }
+
         void update(T oldEntity, T entity) {
             currentSession().evict(oldEntity); //Detach .. otherwise update is a no-op
             currentSession().update(entity);
@@ -151,6 +158,12 @@ public class RelationalDao<T> {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
+    }
+
+    public boolean saveAll(String parentKey, Collection<T> entities) throws Exception {
+        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        RelationalDaoPriv dao = daos.get(shardId);
+        return Transactions.execute(dao.sessionFactory, false, dao::saveAll, entities);
     }
 
     <U> void save(LookupDao.LockedContext<U> context, T entity) throws Exception {

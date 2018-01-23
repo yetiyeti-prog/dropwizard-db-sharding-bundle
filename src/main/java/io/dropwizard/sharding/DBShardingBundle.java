@@ -50,26 +50,45 @@ import java.util.stream.Collectors;
  * A dropwizard bundle that provides sharding over normal RDBMS.
  */
 public abstract class DBShardingBundle<T extends Configuration> implements ConfiguredBundle<T> {
+
     private List<HibernateBundle<T>> shardBundles = Lists.newArrayList();
     @Getter
     private List<SessionFactory> sessionFactories;
     @Getter
     private ShardManager shardManager;
+    @Getter
+    private String namespace;
 
-    public DBShardingBundle(Class<?> entity, Class<?>... entities) {
+    public DBShardingBundle(String namespace, Class<?> entity, Class<?>... entities) {
+        this.namespace = namespace;
+
         val inEntities = ImmutableList.<Class<?>>builder().add(entity).add(entities).build();
         init(inEntities);
     }
 
-    public DBShardingBundle(String classPathPrefix) {
+    public DBShardingBundle(String namespace, String classPathPrefix) {
+        this.namespace = namespace;
+
         Set<Class<?>> entities = new Reflections(classPathPrefix).getTypesAnnotatedWith(Entity.class);
         Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", classPathPrefix));
         val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
         init(inEntities);
     }
 
+    public DBShardingBundle(Class<?> entity, Class<?>... entities) {
+        this("default", entity, entities);
+    }
+
+    public DBShardingBundle(String classPathPrefix) {
+        this("default", classPathPrefix);
+    }
+
     private void init(final ImmutableList<Class<?>> inEntities) {
-        String numShardsEnv = System.getProperty("db.shards", "2");
+        final String SHARD_ENV = "db.shards";
+
+        String numShardsEnv = System.getProperty(String.join(".", namespace, SHARD_ENV),
+                System.getProperty(SHARD_ENV, "2"));
+
         int numShards = Integer.parseInt(numShardsEnv);
         shardManager = new ShardManager(numShards);
         for (int i = 0; i < numShards; i++) {
@@ -77,7 +96,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
                 @Override
                 protected String name() {
-                    return String.format("connectionpool-%d", finalI);
+                    return String.format("connectionpool-%s-%d", namespace, finalI);
                 }
 
                 @Override
@@ -89,7 +108,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     }
 
     @Override
-    public void run(T configuration, Environment environment) throws Exception {
+    public void run(T configuration, Environment environment) {
         sessionFactories = shardBundles.stream().map(HibernateBundle::getSessionFactory).collect(Collectors.toList());
 
     }

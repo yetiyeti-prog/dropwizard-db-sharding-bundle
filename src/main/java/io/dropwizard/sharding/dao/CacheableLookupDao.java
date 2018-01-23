@@ -98,9 +98,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
         if(result) {
             try {
                 Optional<T> updatedEntity = super.get(id);
-                if (updatedEntity.isPresent()) {
-                    cache.put(id, updatedEntity.get());
-                }
+                updatedEntity.ifPresent(t -> cache.put(id, t));
             } catch (Exception e) {
                 throw new RuntimeException("Error updating entity: " + id, e);
             }
@@ -120,9 +118,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
             return true;
         }
         Optional<T> entity = super.get(key);
-        if(entity.isPresent()) {
-            cache.put(key, entity.get());
-        }
+        entity.ifPresent(t -> cache.put(key, t));
         return entity.isPresent();
     }
 }

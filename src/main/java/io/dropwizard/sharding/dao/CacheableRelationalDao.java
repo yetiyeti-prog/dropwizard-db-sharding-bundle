@@ -40,7 +40,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
         this.cache = cache;
     }
 
-    public Optional<T> get(String parentKey, Object key) throws Exception {
+    public Optional<T> get(String parentKey, Object key) {
         if(cache.exists(parentKey, key)) {
             return Optional.ofNullable(cache.get(parentKey, key));
         }

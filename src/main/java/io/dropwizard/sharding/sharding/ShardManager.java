@@ -32,7 +32,7 @@ import lombok.val;
 @ToString
 @Slf4j
 public class ShardManager {
-    private static final int MIN_BUCKET = 0;
+    public static final int MIN_BUCKET = 0;
     public static final int MAX_BUCKET = 999;
 
     private RangeMap<Integer, Integer> buckets = TreeRangeMap.create();

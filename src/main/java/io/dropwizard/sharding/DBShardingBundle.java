@@ -38,6 +38,7 @@ import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
+import org.dom4j.io.STAXEventReader;
 import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
 
@@ -46,10 +47,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static io.dropwizard.sharding.DBShardingBundle.ShardingKeys.DEFAULT_NAMESPACE;
+
 /**
  * A dropwizard bundle that provides sharding over normal RDBMS.
  */
 public abstract class DBShardingBundle<T extends Configuration> implements ConfiguredBundle<T> {
+
+    static class ShardingKeys{
+        static final String DEFAULT_NAMESPACE = "default";
+        static final String SHARD_ENV = "db.shards";
+        static final String DEFAULT_SHARDS = "2";
+    }
 
     private List<HibernateBundle<T>> shardBundles = Lists.newArrayList();
     @Getter
@@ -76,18 +85,16 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     }
 
     public DBShardingBundle(Class<?> entity, Class<?>... entities) {
-        this("default", entity, entities);
+        this(DEFAULT_NAMESPACE, entity, entities);
     }
 
     public DBShardingBundle(String classPathPrefix) {
-        this("default", classPathPrefix);
+        this(DEFAULT_NAMESPACE, classPathPrefix);
     }
 
     private void init(final ImmutableList<Class<?>> inEntities) {
-        final String SHARD_ENV = "db.shards";
-
-        String numShardsEnv = System.getProperty(String.join(".", dbNamespace, SHARD_ENV),
-                System.getProperty(SHARD_ENV, "2"));
+        String numShardsEnv = System.getProperty(String.join(".", dbNamespace, DEFAULT_NAMESPACE),
+                System.getProperty(ShardingKeys.SHARD_ENV, ShardingKeys.DEFAULT_SHARDS));
 
         int numShards = Integer.parseInt(numShardsEnv);
         shardManager = new ShardManager(numShards);

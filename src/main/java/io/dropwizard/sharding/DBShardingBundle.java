@@ -38,7 +38,6 @@ import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
-import org.dom4j.io.STAXEventReader;
 import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
 

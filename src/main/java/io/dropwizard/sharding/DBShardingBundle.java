@@ -46,18 +46,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static io.dropwizard.sharding.DBShardingBundle.ShardingKeys.DEFAULT_NAMESPACE;
-
 /**
  * A dropwizard bundle that provides sharding over normal RDBMS.
  */
 public abstract class DBShardingBundle<T extends Configuration> implements ConfiguredBundle<T> {
 
-    static class ShardingKeys{
-        static final String DEFAULT_NAMESPACE = "default";
-        static final String SHARD_ENV = "db.shards";
-        static final String DEFAULT_SHARDS = "2";
-    }
+    private static final String DEFAULT_NAMESPACE = "default";
+    private static final String SHARD_ENV = "db.shards";
+    private static final String DEFAULT_SHARDS = "2";
 
     private List<HibernateBundle<T>> shardBundles = Lists.newArrayList();
     @Getter
@@ -93,7 +89,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
     private void init(final ImmutableList<Class<?>> inEntities) {
         String numShardsEnv = System.getProperty(String.join(".", dbNamespace, DEFAULT_NAMESPACE),
-                System.getProperty(ShardingKeys.SHARD_ENV, ShardingKeys.DEFAULT_SHARDS));
+                System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
 
         int numShards = Integer.parseInt(numShardsEnv);
         shardManager = new ShardManager(numShards);

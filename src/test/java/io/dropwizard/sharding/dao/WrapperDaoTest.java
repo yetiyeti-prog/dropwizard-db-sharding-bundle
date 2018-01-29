@@ -74,7 +74,7 @@ public class WrapperDaoTest {
     }
 
     @Test
-    public void testDao() throws Exception {
+    public void testDao() {
 
         final String customer = "customer1";
 

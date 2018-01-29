@@ -19,9 +19,9 @@ package io.dropwizard.sharding.dao;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Audit;
 import io.dropwizard.sharding.dao.testdata.entities.Phone;
+import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;

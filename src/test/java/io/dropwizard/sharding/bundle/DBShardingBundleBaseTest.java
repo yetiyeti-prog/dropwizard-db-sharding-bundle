@@ -55,12 +55,12 @@ import static org.mockito.Mockito.when;
  * Core systems are not mocked. Uses H2 for testing.
  */
 public abstract class DBShardingBundleBaseTest {
-    protected static class TestConfig extends Configuration {
+    static class TestConfig extends Configuration {
         @Getter
         private ShardedHibernateFactory shards = new ShardedHibernateFactory();
     }
 
-    protected final TestConfig testConfig = new TestConfig();
+    final TestConfig testConfig = new TestConfig();
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
@@ -85,7 +85,7 @@ public abstract class DBShardingBundleBaseTest {
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         testConfig.shards.setShards(ImmutableList.of(createConfig("1"), createConfig("2")));
         when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
         when(environment.jersey()).thenReturn(jerseyEnvironment);

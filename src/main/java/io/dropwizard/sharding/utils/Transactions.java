@@ -28,11 +28,11 @@ import java.util.function.Function;
 public class Transactions {
     private Transactions() {}
 
-    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, Function<U, T> function, U arg) {
         return executeAndResolve(sessionFactory, false, function, arg);
     }
 
-    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
         T result = execute(sessionFactory, readOnly, function, arg);
         if(null == result) {
             return Optional.empty();
@@ -40,15 +40,15 @@ public class Transactions {
         return Optional.of(result);
     }
 
-    public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
         return execute(sessionFactory, readOnly, function, arg, t -> t);
     }
 
-    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) throws Exception {
+    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) {
         return execute(sessionFactory, readOnly, function, arg, handler, true);
     }
 
-    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler, boolean completeTransaction) throws Exception {
+    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler, boolean completeTransaction) {
         TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, readOnly);
         if(completeTransaction) {
             transactionHandler.beforeStart();

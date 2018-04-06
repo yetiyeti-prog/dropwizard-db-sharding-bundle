@@ -32,6 +32,7 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,6 +58,8 @@ public class LookupDaoTest {
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
+        configuration.setProperty("hibernate.show_sql", "true");
+        configuration.setProperty("hibernate.format_sql", "true");
         configuration.addAnnotatedClass(TestEntity.class);
         configuration.addAnnotatedClass(Phone.class);
         configuration.addAnnotatedClass(Transaction.class);
@@ -261,5 +264,19 @@ public class LookupDaoTest {
         transaction.setAudits(ImmutableList.of(started, completed));
 
         transactionDao.save(phone, transaction);
+    }
+
+    @Test
+    public void deleteTest() throws Exception {
+        TestEntity testEntity = TestEntity.builder()
+                .externalId("testId")
+                .text("Some Text")
+                .build();
+        lookupDao.save(testEntity);
+        Assert.assertNotNull(lookupDao.get("testId")
+                .orElse(null));
+        Assert.assertTrue(lookupDao.delete("testId"));
+        Assert.assertNull(lookupDao.get("testId")
+                                     .orElse(null));
     }
 }

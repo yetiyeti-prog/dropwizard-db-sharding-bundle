@@ -17,6 +17,7 @@
 
 package io.dropwizard.sharding.utils;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import java.util.Optional;
@@ -34,10 +35,7 @@ public class Transactions {
 
     public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
         T result = execute(sessionFactory, readOnly, function, arg);
-        if(null == result) {
-            return Optional.empty();
-        }
-        return Optional.of(result);
+        return Optional.ofNullable(result);
     }
 
     public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
@@ -64,6 +62,19 @@ public class Transactions {
             if(completeTransaction) {
                 transactionHandler.onError();
             }
+            throw e;
+        }
+    }
+
+    public static <T> T execute(SessionFactory sessionFactory, Function<Session, T> handler) {
+        TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, true);
+        transactionHandler.beforeStart();
+        try {
+            T result = handler.apply(transactionHandler.getSession());
+            transactionHandler.afterEnd();
+            return result;
+        } catch (Exception e) {
+            transactionHandler.onError();
             throw e;
         }
     }

@@ -31,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.LockMode;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
@@ -114,6 +115,18 @@ public class LookupDao<T> {
             return list(criteria.getExecutableCriteria(currentSession()));
         }
 
+        /**
+         * Delete an object
+         */
+        boolean delete(String id) {
+            return Optional.ofNullable(getLocked(id, LockMode.UPGRADE_NOWAIT))
+                        .map(object -> {
+                            currentSession().delete(object);
+                            return true;
+                        })
+                        .orElse(false);
+
+        }
     }
 
     private List<LookupDaoPriv> daos;
@@ -304,6 +317,16 @@ public class LookupDao<T> {
         }).flatMap(Collection::stream).collect(Collectors.toList());
     }
 
+    public <U> U runInSession(String id, Function<Session, U> handler) {
+        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        LookupDaoPriv dao = daos.get(shardId);
+        return Transactions.execute(dao.sessionFactory, handler);
+    }
+
+    public boolean delete(String id) {
+        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        return Transactions.execute(daos.get(shardId).sessionFactory, false, daos.get(shardId)::delete, id);
+    }
 
     protected Field getKeyField() {
         return this.keyField;

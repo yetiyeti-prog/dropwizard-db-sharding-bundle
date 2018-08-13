@@ -29,11 +29,15 @@ import io.dropwizard.hibernate.HibernateBundle;
 import io.dropwizard.hibernate.SessionFactoryFactory;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
+import io.dropwizard.sharding.admin.BlacklistShardTask;
+import io.dropwizard.sharding.admin.UnblacklistShardTask;
 import io.dropwizard.sharding.caching.LookupCache;
 import io.dropwizard.sharding.caching.RelationalCache;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.*;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
+import io.dropwizard.sharding.sharding.InMemoryLocalShardBlacklistingStore;
+import io.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -93,7 +97,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
                 System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
 
         int numShards = Integer.parseInt(numShardsEnv);
-        shardManager = new ShardManager(numShards);
+        shardManager = new ShardManager(numShards, getBlacklistingStore());
         for (int i = 0; i < numShards; i++) {
             final int finalI = i;
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
@@ -113,7 +117,8 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     @Override
     public void run(T configuration, Environment environment) {
         sessionFactories = shardBundles.stream().map(HibernateBundle::getSessionFactory).collect(Collectors.toList());
-
+        environment.admin().addTask(new BlacklistShardTask(shardManager));
+        environment.admin().addTask(new UnblacklistShardTask(shardManager));
     }
 
     @Override
@@ -137,6 +142,14 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     @VisibleForTesting
     public void initBundles(Bootstrap bootstrap) {
         shardBundles.forEach(hibernameBundle -> initialize(bootstrap));
+    }
+
+    /**
+     * Child classes can override this to provide custom implementation.
+     * @return
+     */
+    public ShardBlacklistingStore getBlacklistingStore() {
+        return new InMemoryLocalShardBlacklistingStore();
     }
 
     protected abstract ShardedHibernateFactory getConfig(T config);

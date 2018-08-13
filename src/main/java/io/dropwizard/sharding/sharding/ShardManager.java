@@ -17,14 +17,19 @@
 
 package io.dropwizard.sharding.sharding;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
+import io.dropwizard.sharding.exceptions.ShardBlacklistedException;
 import lombok.Builder;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manages shard to bucket mapping.
@@ -34,21 +39,34 @@ import lombok.val;
 public class ShardManager {
     public static final int MIN_BUCKET = 0;
     public static final int MAX_BUCKET = 999;
-
+    private final int numBuckets;
+    private final ShardBlacklistingStore shardBlacklistingStore;
     private RangeMap<Integer, Integer> buckets = TreeRangeMap.create();
+    LoadingCache<Integer, Boolean> blackListedShards;
+
+    public ShardManager(int numBuckets) {
+        this(numBuckets, new InMemoryLocalShardBlacklistingStore());
+    }
 
     @Builder
-    public ShardManager(int numBuckets) {
+    public ShardManager(int numBuckets, ShardBlacklistingStore shardBlacklistingStore) {
+        this.numBuckets = numBuckets;
+        this.shardBlacklistingStore = shardBlacklistingStore;
         int interval = MAX_BUCKET / numBuckets;
         int shardCounter = 0;
         boolean endReached = false;
         for(int start = MIN_BUCKET; !endReached; start += interval, shardCounter++) {
             int end = start + interval - 1;
-            endReached = !((MAX_BUCKET - start)  > (2 *interval));
+            endReached = (MAX_BUCKET - start) <= (2 * interval);
             end =  endReached ? end + MAX_BUCKET - end : end;
             buckets.put(Range.closed(start, end), shardCounter);
         }
         log.info("Buckets to shard allocation: {}", buckets);
+        this.blackListedShards = Caffeine.newBuilder()
+                .maximumSize(10_000)
+                .expireAfterWrite(5, TimeUnit.MINUTES)
+                .refreshAfterWrite(1, TimeUnit.MINUTES)
+                .build(shardBlacklistingStore::blacklisted);
     }
 
     public int shardForBucket(int bucketId) {
@@ -57,8 +75,25 @@ public class ShardManager {
         if(null == entry) {
             throw new IllegalAccessError("Bucket not mapped to any shard");
         }
-        return entry.getValue();
+        final int shard = entry.getValue();
+        final Boolean isBlacklisted = blackListedShards.get(shard);
+        if(null != isBlacklisted && isBlacklisted) {
+            throw new ShardBlacklistedException(shard);
+        }
+        return shard;
     }
 
+    public void blacklistShard(int shardId) {
+        if(shardId >=0 && shardId < numBuckets) {
+            shardBlacklistingStore.blacklist(shardId);
+            blackListedShards.refresh(shardId);
+        }
+    }
 
+    public void unblacklistShard(int shardId) {
+        if(shardId >=0 && shardId < numBuckets) {
+            shardBlacklistingStore.unblacklist(shardId);
+            blackListedShards.refresh(shardId);
+        }
+    }
 }

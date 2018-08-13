@@ -25,6 +25,7 @@ import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jersey.DropwizardResourceConfig;
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
+import io.dropwizard.setup.AdminEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.sharding.DBShardingBundle;
@@ -65,6 +66,7 @@ public abstract class DBShardingBundleBaseTest {
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
     private final Environment environment = mock(Environment.class);
+    private final AdminEnvironment adminEnvironment= mock(AdminEnvironment.class);
     private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
@@ -91,7 +93,7 @@ public abstract class DBShardingBundleBaseTest {
         when(environment.jersey()).thenReturn(jerseyEnvironment);
         when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
         when(environment.healthChecks()).thenReturn(healthChecks);
-
+        when(environment.admin()).thenReturn(adminEnvironment);
     }
 
     @Test

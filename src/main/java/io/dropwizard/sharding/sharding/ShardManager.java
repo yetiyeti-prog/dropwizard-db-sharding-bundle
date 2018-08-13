@@ -39,20 +39,20 @@ import java.util.concurrent.TimeUnit;
 public class ShardManager {
     public static final int MIN_BUCKET = 0;
     public static final int MAX_BUCKET = 999;
-    private final int numBuckets;
+    private final int numShards;
     private final ShardBlacklistingStore shardBlacklistingStore;
     private RangeMap<Integer, Integer> buckets = TreeRangeMap.create();
     LoadingCache<Integer, Boolean> blackListedShards;
 
-    public ShardManager(int numBuckets) {
-        this(numBuckets, new InMemoryLocalShardBlacklistingStore());
+    public ShardManager(int numShards) {
+        this(numShards, new InMemoryLocalShardBlacklistingStore());
     }
 
     @Builder
-    public ShardManager(int numBuckets, ShardBlacklistingStore shardBlacklistingStore) {
-        this.numBuckets = numBuckets;
+    public ShardManager(int numShards, ShardBlacklistingStore shardBlacklistingStore) {
+        this.numShards = numShards;
         this.shardBlacklistingStore = shardBlacklistingStore;
-        int interval = MAX_BUCKET / numBuckets;
+        int interval = MAX_BUCKET / numShards;
         int shardCounter = 0;
         boolean endReached = false;
         for(int start = MIN_BUCKET; !endReached; start += interval, shardCounter++) {
@@ -84,14 +84,14 @@ public class ShardManager {
     }
 
     public void blacklistShard(int shardId) {
-        if(shardId >=0 && shardId < numBuckets) {
+        if(shardId >=0 && shardId < numShards) {
             shardBlacklistingStore.blacklist(shardId);
             blackListedShards.refresh(shardId);
         }
     }
 
     public void unblacklistShard(int shardId) {
-        if(shardId >=0 && shardId < numBuckets) {
+        if(shardId >=0 && shardId < numShards) {
             shardBlacklistingStore.unblacklist(shardId);
             blackListedShards.refresh(shardId);
         }

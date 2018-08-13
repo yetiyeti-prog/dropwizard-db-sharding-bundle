@@ -17,6 +17,8 @@
 
 package io.dropwizard.sharding.sharding;
 
+import io.dropwizard.sharding.exceptions.ShardBlacklistedException;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -27,6 +29,22 @@ public class ShardManagerTest {
     public void testShardForBucket() throws Exception {
         ShardManager shardManager = new ShardManager(5);
         System.out.println(shardManager);
+        assertEquals(0, shardManager.shardForBucket(100));
+    }
+
+    @Test
+    public void testBlacklisting() {
+        ShardManager shardManager = new ShardManager(5);
+        System.out.println(shardManager);
+        assertEquals(0, shardManager.shardForBucket(100));
+        shardManager.blacklistShard(0);
+        try {
+            shardManager.shardForBucket(100);
+            Assert.fail("Should have errored out");
+        } catch (ShardBlacklistedException e) {
+
+        }
+        shardManager.unblacklistShard(0);
         assertEquals(0, shardManager.shardForBucket(100));
     }
 }

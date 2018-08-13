@@ -19,8 +19,6 @@ package io.dropwizard.sharding.dao;
 
 import com.google.common.base.Preconditions;
 import io.dropwizard.hibernate.AbstractDAO;
-import io.dropwizard.sharding.sharding.BucketIdExtractor;
-import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.Transactions;
 import lombok.Builder;
@@ -108,20 +106,19 @@ public class RelationalDao<T> {
 
     private List<RelationalDaoPriv> daos;
     private final Class<T> entityClass;
-    private final ShardManager shardManager;
-    private final BucketIdExtractor<String> bucketIdExtractor;
+    private final ShardCalculator<String> shardCalculator;
     private final Field keyField;
 
     /**
      * Create a relational DAO.
      * @param sessionFactories List of session factories. One for each shard.
      * @param entityClass The class for which the dao will be used.
-     * @param shardManager The {@link ShardManager} used to manage the bucket to shard mapping.
+     * @param shardCalculator
      */
-    public RelationalDao(List<SessionFactory> sessionFactories, Class<T> entityClass,
-                         ShardManager shardManager, BucketIdExtractor<String> bucketIdExtractor) {
-        this.shardManager = shardManager;
-        this.bucketIdExtractor = bucketIdExtractor;
+    public RelationalDao(
+            List<SessionFactory> sessionFactories, Class<T> entityClass,
+            ShardCalculator<String> shardCalculator ) {
+        this.shardCalculator = shardCalculator;
         this.daos = sessionFactories.stream().map(RelationalDaoPriv::new).collect(Collectors.toList());
         this.entityClass = entityClass;
 
@@ -145,7 +142,7 @@ public class RelationalDao<T> {
     }
 
     public<U> U get(String parentKey, Object key, Function<T, U> function) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, true, dao::get, key, function);
     }
@@ -155,13 +152,13 @@ public class RelationalDao<T> {
     }
 
     public <U> U save(String parentKey, T entity, Function<T, U> handler) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::save, entity, handler);
     }
 
     public boolean saveAll(String parentKey, Collection<T> entities) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::saveAll, entities);
     }
@@ -182,7 +179,7 @@ public class RelationalDao<T> {
     }
 
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return update(dao.sessionFactory, dao, id, updater, true);
     }
@@ -206,7 +203,7 @@ public class RelationalDao<T> {
     }
 
     public boolean update(String parentKey, DetachedCriteria criteria, Function<T, T> updater) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         try {
             SelectParamPriv selectParam = SelectParamPriv.builder()
@@ -235,7 +232,7 @@ public class RelationalDao<T> {
     }
 
     public boolean updateAll(String parentKey, int start, int numRows, DetachedCriteria criteria, Function<T, T> updater) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         try {
             SelectParamPriv selectParam = SelectParamPriv.builder()
@@ -278,7 +275,7 @@ public class RelationalDao<T> {
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, int first, int numResults, Function<List<T>, U> handler) throws Exception {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         SelectParamPriv selectParam = SelectParamPriv.<T>builder()
                 .criteria(criteria)
@@ -289,13 +286,13 @@ public class RelationalDao<T> {
     }
 
     public long count(String parentKey, DetachedCriteria criteria) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.<Long, DetachedCriteria>execute(dao.sessionFactory, true, dao::count, criteria);
     }
 
     public boolean exists(String parentKey, Object key) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
+        int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         Optional<T> result = Transactions.<T, Object>executeAndResolve(dao.sessionFactory, true, dao::get, key);
         return result.isPresent();

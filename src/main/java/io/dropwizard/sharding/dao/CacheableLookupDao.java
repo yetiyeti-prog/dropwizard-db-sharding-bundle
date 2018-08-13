@@ -18,9 +18,8 @@
 package io.dropwizard.sharding.dao;
 
 import io.dropwizard.sharding.caching.LookupCache;
-import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.LookupKey;
-import io.dropwizard.sharding.sharding.ShardManager;
+import io.dropwizard.sharding.utils.ShardCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.SessionFactory;
 
@@ -43,9 +42,8 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
 
     public CacheableLookupDao(List<SessionFactory> sessionFactories,
                               Class<T> entityClass,
-                              ShardManager shardManager,
-                              BucketIdExtractor<String> bucketIdExtractor, LookupCache<T> cache) {
-        super(sessionFactories, entityClass, shardManager, bucketIdExtractor);
+                              ShardCalculator<String> shardCalculator, LookupCache<T> cache) {
+        super(sessionFactories, entityClass, shardCalculator);
         this.cache = cache;
     }
 

@@ -25,11 +25,17 @@ import lombok.extern.slf4j.Slf4j;
  * Utility class for calculating shards.
  */
 @Slf4j
-public class ShardCalculator {
-    private ShardCalculator() {
+public class ShardCalculator<T> {
+
+    private final ShardManager shardManager;
+    private final BucketIdExtractor<T> extractor;
+
+    public ShardCalculator(ShardManager shardManager, BucketIdExtractor<T> extractor) {
+        this.shardManager = shardManager;
+        this.extractor = extractor;
     }
 
-    public static<T> int shardId(ShardManager shardManager, BucketIdExtractor<T> extractor, T key) {
+    public int shardId(T key) {
         int bucketId = extractor.bucketId(key);
         return shardManager.shardForBucket(bucketId);
     }

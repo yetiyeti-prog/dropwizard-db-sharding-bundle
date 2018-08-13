@@ -27,6 +27,7 @@ import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
+import io.dropwizard.sharding.utils.ShardCalculator;
 import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -80,7 +81,8 @@ public class CacheableLookupDaoTest {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
         final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        lookupDao = new CacheableLookupDao<>(sessionFactories, TestEntity.class, shardManager, new ConsistentHashBucketIdExtractor<>(), new LookupCache<TestEntity>() {
+        lookupDao = new CacheableLookupDao<>(
+                sessionFactories, TestEntity.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new LookupCache<TestEntity>() {
 
             private Map<String, TestEntity> cache = new HashMap<>();
 
@@ -99,7 +101,7 @@ public class CacheableLookupDaoTest {
                 return cache.get(key);
             }
         });
-        phoneDao = new CacheableLookupDao<>(sessionFactories, Phone.class, shardManager, new ConsistentHashBucketIdExtractor<>(), new LookupCache<Phone>() {
+        phoneDao = new CacheableLookupDao<>(sessionFactories, Phone.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new LookupCache<Phone>() {
 
             private Map<String, Phone> cache = new HashMap<>();
 
@@ -118,7 +120,7 @@ public class CacheableLookupDaoTest {
                 return cache.get(key);
             }
         });
-        transactionDao = new CacheableRelationalDao<>(sessionFactories, Transaction.class, shardManager, new ConsistentHashBucketIdExtractor<>(), new RelationalCache<Transaction>() {
+        transactionDao = new CacheableRelationalDao<>(sessionFactories, Transaction.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new RelationalCache<Transaction>() {
 
             private Map<String, Object> cache = new HashMap<>();
 
@@ -157,7 +159,7 @@ public class CacheableLookupDaoTest {
                 return (List<Transaction>) cache.get(StringUtils.join(parentKey, first, numResults, ':'));
             }
         });
-        auditDao = new CacheableRelationalDao<>(sessionFactories, Audit.class, shardManager, new ConsistentHashBucketIdExtractor<>(), new RelationalCache<Audit>() {
+        auditDao = new CacheableRelationalDao<>(sessionFactories, Audit.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new RelationalCache<Audit>() {
 
             private Map<String, Object> cache = new HashMap<>();
 

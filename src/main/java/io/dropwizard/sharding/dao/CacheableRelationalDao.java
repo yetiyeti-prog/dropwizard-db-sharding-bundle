@@ -18,8 +18,7 @@
 package io.dropwizard.sharding.dao;
 
 import io.dropwizard.sharding.caching.RelationalCache;
-import io.dropwizard.sharding.sharding.BucketIdExtractor;
-import io.dropwizard.sharding.sharding.ShardManager;
+import io.dropwizard.sharding.utils.ShardCalculator;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 
@@ -34,9 +33,9 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
     private RelationalCache<T> cache;
 
     public CacheableRelationalDao(List<SessionFactory> sessionFactories, Class<T> entityClass,
-                                  ShardManager shardManager, BucketIdExtractor<String> bucketIdExtractor,
+                                  ShardCalculator<String> shardCalculator,
                                   RelationalCache<T> cache) {
-        super(sessionFactories, entityClass, shardManager, bucketIdExtractor);
+        super(sessionFactories, entityClass, shardCalculator);
         this.cache = cache;
     }
 

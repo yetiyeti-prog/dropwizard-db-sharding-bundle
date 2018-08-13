@@ -25,6 +25,7 @@ import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
+import io.dropwizard.sharding.utils.ShardCalculator;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -74,10 +75,11 @@ public class LookupDaoTest {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
         final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        lookupDao = new LookupDao<>(sessionFactories, TestEntity.class, shardManager, new ConsistentHashBucketIdExtractor<>());
-        phoneDao = new LookupDao<>(sessionFactories, Phone.class, shardManager, new ConsistentHashBucketIdExtractor<>());
-        transactionDao = new RelationalDao<>(sessionFactories, Transaction.class, shardManager, new ConsistentHashBucketIdExtractor<>());
-        auditDao = new RelationalDao<>(sessionFactories, Audit.class, shardManager, new ConsistentHashBucketIdExtractor<>());
+        final ShardCalculator<String> shardCalculator = new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>());
+        lookupDao = new LookupDao<>(sessionFactories, TestEntity.class, shardCalculator);
+        phoneDao = new LookupDao<>(sessionFactories, Phone.class, shardCalculator);
+        transactionDao = new RelationalDao<>(sessionFactories, Transaction.class, shardCalculator);
+        auditDao = new RelationalDao<>(sessionFactories, Audit.class, shardCalculator);
     }
 
     @After

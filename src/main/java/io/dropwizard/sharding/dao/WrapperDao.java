@@ -21,6 +21,7 @@ import io.dropwizard.hibernate.AbstractDAO;
 import io.dropwizard.sharding.sharding.ShardedTransaction;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.TransactionHandler;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 public class WrapperDao<T, DaoType extends AbstractDAO<T>> {
 
     private List<DaoType> daos;
+    @Getter
     private final ShardCalculator<String> shardCalculator;
 
     /**

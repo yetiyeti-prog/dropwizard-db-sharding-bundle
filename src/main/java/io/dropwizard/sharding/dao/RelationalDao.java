@@ -22,6 +22,7 @@ import io.dropwizard.hibernate.AbstractDAO;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.Transactions;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
@@ -106,6 +107,7 @@ public class RelationalDao<T> {
 
     private List<RelationalDaoPriv> daos;
     private final Class<T> entityClass;
+    @Getter
     private final ShardCalculator<String> shardCalculator;
     private final Field keyField;
 

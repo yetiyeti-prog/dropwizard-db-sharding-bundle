@@ -117,6 +117,8 @@ public class LookupDao<T> {
 
     private List<LookupDaoPriv> daos;
     private final Class<T> entityClass;
+
+    @Getter
     private final ShardCalculator<String> shardCalculator;
     private final Field keyField;
 

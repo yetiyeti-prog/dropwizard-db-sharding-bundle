@@ -83,6 +83,22 @@ public class ShardManager {
         return shard;
     }
 
+    public boolean isMappedToValidShard(int bucketId) {
+        if(bucketId >=MIN_BUCKET && bucketId <= MAX_BUCKET) {
+            return false;
+        }
+        val entry = buckets.getEntry(bucketId);
+        if(null == entry) {
+            return false;
+        }
+        final int shard = entry.getValue();
+        final Boolean isBlacklisted = blackListedShards.get(shard);
+        if(null != isBlacklisted && isBlacklisted) {
+            throw new ShardBlacklistedException(shard);
+        }
+        return false;
+    }
+
     public void blacklistShard(int shardId) {
         if(shardId >=0 && shardId < numShards) {
             shardBlacklistingStore.blacklist(shardId);

@@ -39,4 +39,9 @@ public class ShardCalculator<T> {
         int bucketId = extractor.bucketId(key);
         return shardManager.shardForBucket(bucketId);
     }
+
+    public boolean isOnValidShard(T key) {
+        int bucketId = extractor.bucketId(key);
+        return shardManager.isMappedToValidShard(bucketId);
+    }
 }

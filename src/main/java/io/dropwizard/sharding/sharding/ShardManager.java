@@ -42,7 +42,7 @@ public class ShardManager {
     private final int numShards;
     private final ShardBlacklistingStore shardBlacklistingStore;
     private RangeMap<Integer, Integer> buckets = TreeRangeMap.create();
-    LoadingCache<Integer, Boolean> blackListedShards;
+    private LoadingCache<Integer, Boolean> blackListedShards;
 
     public ShardManager(int numShards) {
         this(numShards, new InMemoryLocalShardBlacklistingStore());

@@ -188,7 +188,7 @@ public class RelationalDao<T> {
     }
 
     public <U> U runInSession(String id, Function<Session, U> handler) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        int shardId = shardCalculator.shardId(id);
         RelationalDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, handler);
     }

@@ -317,13 +317,13 @@ public class LookupDao<T> {
     }
 
     public <U> U runInSession(String id, Function<Session, U> handler) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, handler);
     }
 
     public boolean delete(String id) {
-        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        int shardId = shardCalculator.shardId(id);
         return Transactions.execute(daos.get(shardId).sessionFactory, false, daos.get(shardId)::delete, id);
     }
 

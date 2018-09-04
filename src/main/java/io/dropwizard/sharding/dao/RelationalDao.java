@@ -26,6 +26,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
@@ -184,6 +185,12 @@ public class RelationalDao<T> {
         int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         return update(dao.sessionFactory, dao, id, updater, true);
+    }
+
+    public <U> U runInSession(String id, Function<Session, U> handler) {
+        int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, id);
+        RelationalDaoPriv dao = daos.get(shardId);
+        return Transactions.execute(dao.sessionFactory, handler);
     }
 
     private boolean update(SessionFactory daoSessionFactory, RelationalDaoPriv dao, Object id, Function<T, T> updater, boolean completeTransaction){

@@ -17,17 +17,15 @@
 
 package io.dropwizard.sharding.dao;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.dropwizard.sharding.dao.testdata.OrderDao;
-import io.dropwizard.sharding.dao.testdata.entities.Order;
-import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
+import io.dropwizard.sharding.dao.testdata.entities.RelationalEntity;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
+import org.hibernate.criterion.DetachedCriteria;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,10 +34,10 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class WrapperDaoTest {
+public class RelationalDaoTest {
 
     private List<SessionFactory> sessionFactories = Lists.newArrayList();
-    private WrapperDao<Order, OrderDao> dao;
+    private RelationalDao<RelationalEntity> relationalDao;
 
     private SessionFactory buildSessionFactory(String dbName) {
         Configuration configuration = new Configuration();
@@ -50,8 +48,7 @@ public class WrapperDaoTest {
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
-        configuration.addAnnotatedClass(Order.class);
-        configuration.addAnnotatedClass(OrderItem.class);
+        configuration.addAnnotatedClass(RelationalEntity.class);
 
         StandardServiceRegistry serviceRegistry
                 = new StandardServiceRegistryBuilder().applySettings(
@@ -61,11 +58,11 @@ public class WrapperDaoTest {
 
     @Before
     public void before() {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < 16; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
         final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        dao = new WrapperDao<>(sessionFactories, OrderDao.class, shardManager, new ConsistentHashBucketIdExtractor<>());
+        relationalDao = new RelationalDao<>(sessionFactories, RelationalEntity.class, shardManager, new ConsistentHashBucketIdExtractor<>());
     }
 
     @After
@@ -74,32 +71,19 @@ public class WrapperDaoTest {
     }
 
     @Test
-    public void testDao() {
-
-        final String customer = "customer1";
-
-        Order order = Order.builder()
-                            .customerId(customer)
-                            .build();
-
-        OrderItem itemA = OrderItem.builder()
-                                .order(order)
-                                .name("Item A")
-                                .build();
-        OrderItem itemB = OrderItem.builder()
-                .order(order)
-                .name("Item B")
+    public void testBulkSave() throws Exception {
+        String key = "testPhone";
+        RelationalEntity entityOne = RelationalEntity.builder()
+                .key("1")
+                .value("abcd")
                 .build();
+        RelationalEntity entityTwo = RelationalEntity.builder()
+                .key("2")
+                .value("abcd")
+                .build();
+        relationalDao.saveAll(key, Lists.newArrayList(entityOne, entityTwo));
+        List<RelationalEntity> entities = relationalDao.select(key, DetachedCriteria.forClass(RelationalEntity.class));
+        assertEquals(2, entities.size());
 
-        order.setItems(ImmutableList.of(itemA, itemB));
-
-        Order saveResult = dao.forParent(customer).save(order);
-
-        long saveId = saveResult.getId();
-
-        Order result = dao.forParent(customer).get(saveId);
-
-        assertEquals(saveResult.getId(), result.getId());
-        assertEquals(saveResult.getId(), result.getId());
     }
 }

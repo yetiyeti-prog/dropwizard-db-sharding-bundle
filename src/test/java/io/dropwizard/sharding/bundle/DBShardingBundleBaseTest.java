@@ -174,7 +174,7 @@ public abstract class DBShardingBundleBaseTest {
         List<OrderItem> orderItems = orderItemDao.select("customer1",
                                                         DetachedCriteria.forClass(OrderItem.class)
                                                             .createAlias("order", "o")
-                                                            .add(Restrictions.eq("o.orderId", "OD00001")));
+                                                            .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         orderItemDao.update("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
@@ -189,7 +189,7 @@ public abstract class DBShardingBundleBaseTest {
         orderItems = orderItemDao.select("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
                         .createAlias("order", "o")
-                        .add(Restrictions.eq("o.orderId", "OD00001")));
+                        .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         assertEquals("Item AA", orderItems.get(0).getName());
     }

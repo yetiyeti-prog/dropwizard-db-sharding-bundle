@@ -63,7 +63,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
     public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
         List<T> result = cache.select(parentKey);
         if(result == null) {
-            result = super.select(parentKey, criteria, 0, 10);
+            result = super.select(parentKey, criteria, 0, Integer.MAX_VALUE);
         }
         if(result != null) {
             cache.put(parentKey, result);

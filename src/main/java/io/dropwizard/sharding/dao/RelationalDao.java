@@ -253,7 +253,7 @@ public class RelationalDao<T> {
 
 
     public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
-        return select(parentKey, criteria, 0, 10);
+        return select(parentKey, criteria, 0, Integer.MAX_VALUE);
     }
 
     public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
@@ -261,7 +261,7 @@ public class RelationalDao<T> {
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, Function<List<T>, U> handler) throws Exception {
-        return select(parentKey, criteria, 0, 10, handler);
+        return select(parentKey, criteria, 0, Integer.MAX_VALUE, handler);
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, int first, int numResults, Function<List<T>, U> handler) throws Exception {
@@ -289,7 +289,7 @@ public class RelationalDao<T> {
     }
 
     public List<T> scatterGather(DetachedCriteria criteria) {
-        return scatterGather(criteria, 0, 10);
+        return scatterGather(criteria, 0, Integer.MAX_VALUE);
     }
 
     public List<T> scatterGather(DetachedCriteria criteria, int start, int numRows) {

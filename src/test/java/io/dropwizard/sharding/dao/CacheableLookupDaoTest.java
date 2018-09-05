@@ -299,7 +299,7 @@ public class CacheableLookupDaoTest {
                                                         .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")));
+                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
         assertEquals("Started", audits.get(0).getText());
 
     }
@@ -320,11 +320,11 @@ public class CacheableLookupDaoTest {
         saveHierarchy("9986402019");
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                .add(Restrictions.eq("transaction.transactionId", "newTxn-" + phoneNumber)));
+                .add(Restrictions.eq("transaction.transactionId", "newTxn-" + phoneNumber)), 0, 10);
 
         assertEquals(2, audits.size());
 
-        List<Audit> allAudits = auditDao.scatterGather(DetachedCriteria.forClass(Audit.class));
+        List<Audit> allAudits = auditDao.scatterGather(DetachedCriteria.forClass(Audit.class), 0, 10);
         assertEquals(4, allAudits.size());
     }
 

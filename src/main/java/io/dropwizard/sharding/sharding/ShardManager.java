@@ -94,9 +94,9 @@ public class ShardManager {
         final int shard = entry.getValue();
         final Boolean isBlacklisted = blackListedShards.get(shard);
         if(null != isBlacklisted && isBlacklisted) {
-            throw new ShardBlacklistedException(shard);
+            return false;
         }
-        return false;
+        return true;
     }
 
     public void blacklistShard(int shardId) {

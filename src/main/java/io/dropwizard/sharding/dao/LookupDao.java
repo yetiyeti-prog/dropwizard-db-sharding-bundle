@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
  * The entity can be retrieved from any shard using the key.
  */
 @Slf4j
-public class LookupDao<T> {
+public class LookupDao<T> implements ShardedDao<T> {
 
     /**
      * This DAO wil be used to perform the ops inside a shard

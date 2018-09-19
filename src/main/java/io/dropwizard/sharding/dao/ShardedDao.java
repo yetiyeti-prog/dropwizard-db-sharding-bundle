@@ -22,6 +22,6 @@ import io.dropwizard.sharding.utils.ShardCalculator;
 /**
  *
  */
-public interface ShardedDao {
+public interface ShardedDao<T> {
     ShardCalculator<String> getShardCalculator();
 }

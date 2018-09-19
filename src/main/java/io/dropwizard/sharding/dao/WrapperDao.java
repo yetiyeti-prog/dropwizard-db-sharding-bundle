@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  * - Use {@link RelationalDao} where-ever possible as it will be slight more performant than this due to lack of any proxy.
  */
 @Slf4j
-public class WrapperDao<T, DaoType extends AbstractDAO<T>> implements ShardedDao {
+public class WrapperDao<T, DaoType extends AbstractDAO<T>> implements ShardedDao<T> {
 
     private List<DaoType> daos;
     @Getter

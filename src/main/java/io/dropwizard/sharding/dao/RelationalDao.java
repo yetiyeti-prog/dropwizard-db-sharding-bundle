@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  * A murmur 128 hash of the string parent key is used to route the save and retrieve calls from the proper shard.
  */
 @Slf4j
-public class RelationalDao<T> implements ShardedDao {
+public class RelationalDao<T> implements ShardedDao<T> {
 
     private final class RelationalDaoPriv extends AbstractDAO<T> {
 

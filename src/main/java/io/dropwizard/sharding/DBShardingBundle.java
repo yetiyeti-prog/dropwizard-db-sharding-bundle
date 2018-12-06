@@ -38,6 +38,7 @@ import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
 import lombok.val;
+import org.assertj.core.util.Strings;
 import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
 
@@ -64,6 +65,13 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     public DBShardingBundle(String classPathPrefix) {
         Set<Class<?>> entities = new Reflections(classPathPrefix).getTypesAnnotatedWith(Entity.class);
         Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", classPathPrefix));
+        val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
+        init(inEntities);
+    }
+
+    public DBShardingBundle(List<String> classPathPrefixList) {
+        Set<Class<?>> entities = new Reflections(classPathPrefixList).getTypesAnnotatedWith(Entity.class);
+        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", String.join(",",classPathPrefixList)));
         val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
         init(inEntities);
     }

@@ -17,6 +17,7 @@
 
 package io.dropwizard.sharding.utils;
 
+import lombok.Getter;
 import org.hibernate.*;
 import org.hibernate.context.internal.ManagedSessionContext;
 import org.hibernate.resource.transaction.spi.TransactionStatus;
@@ -28,6 +29,7 @@ public class TransactionHandler {
 
 
     // Context variables
+    @Getter
     private Session session;
     private final SessionFactory sessionFactory;
     private boolean readOnly;

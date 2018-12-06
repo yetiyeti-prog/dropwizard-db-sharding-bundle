@@ -17,6 +17,7 @@
 
 package io.dropwizard.sharding.utils;
 
+import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 
 import java.util.Optional;
@@ -28,27 +29,24 @@ import java.util.function.Function;
 public class Transactions {
     private Transactions() {}
 
-    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, Function<U, T> function, U arg) {
         return executeAndResolve(sessionFactory, false, function, arg);
     }
 
-    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> Optional<T> executeAndResolve(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
         T result = execute(sessionFactory, readOnly, function, arg);
-        if(null == result) {
-            return Optional.empty();
-        }
-        return Optional.of(result);
+        return Optional.ofNullable(result);
     }
 
-    public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) throws Exception {
+    public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg) {
         return execute(sessionFactory, readOnly, function, arg, t -> t);
     }
 
-    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) throws Exception {
+    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) {
         return execute(sessionFactory, readOnly, function, arg, handler, true);
     }
 
-    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler, boolean completeTransaction) throws Exception {
+    public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler, boolean completeTransaction) {
         TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, readOnly);
         if(completeTransaction) {
             transactionHandler.beforeStart();
@@ -64,6 +62,19 @@ public class Transactions {
             if(completeTransaction) {
                 transactionHandler.onError();
             }
+            throw e;
+        }
+    }
+
+    public static <T> T execute(SessionFactory sessionFactory, Function<Session, T> handler) {
+        TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, true);
+        transactionHandler.beforeStart();
+        try {
+            T result = handler.apply(transactionHandler.getSession());
+            transactionHandler.afterEnd();
+            return result;
+        } catch (Exception e) {
+            transactionHandler.onError();
             throw e;
         }
     }

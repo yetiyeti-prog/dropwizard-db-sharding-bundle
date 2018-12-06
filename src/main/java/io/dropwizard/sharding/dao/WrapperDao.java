@@ -17,12 +17,12 @@
 
 package io.dropwizard.sharding.dao;
 
+import io.dropwizard.hibernate.AbstractDAO;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.ShardedTransaction;
-import io.dropwizard.sharding.utils.TransactionHandler;
 import io.dropwizard.sharding.utils.ShardCalculator;
-import io.dropwizard.hibernate.AbstractDAO;
+import io.dropwizard.sharding.utils.TransactionHandler;
 import lombok.extern.slf4j.Slf4j;
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.MethodInterceptor;

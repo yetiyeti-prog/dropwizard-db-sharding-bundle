@@ -82,7 +82,7 @@ public class RelationalDaoTest {
                 .value("abcd")
                 .build();
         relationalDao.saveAll(key, Lists.newArrayList(entityOne, entityTwo));
-        List<RelationalEntity> entities = relationalDao.select(key, DetachedCriteria.forClass(RelationalEntity.class));
+        List<RelationalEntity> entities = relationalDao.select(key, DetachedCriteria.forClass(RelationalEntity.class), 0, 10);
         assertEquals(2, entities.size());
 
     }

@@ -57,12 +57,12 @@ import static org.mockito.Mockito.when;
  * Core systems are not mocked. Uses H2 for testing.
  */
 public abstract class DBShardingBundleBaseTest {
-    protected static class TestConfig extends Configuration {
+    static class TestConfig extends Configuration {
         @Getter
         private ShardedHibernateFactory shards = new ShardedHibernateFactory();
     }
 
-    protected final TestConfig testConfig = new TestConfig();
+    final TestConfig testConfig = new TestConfig();
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
@@ -87,7 +87,7 @@ public abstract class DBShardingBundleBaseTest {
     }
 
     @Before
-    public void setup() throws Exception {
+    public void setup() {
         testConfig.shards.setShards(ImmutableList.of(createConfig("1"), createConfig("2")));
         when(jerseyEnvironment.getResourceConfig()).thenReturn(new DropwizardResourceConfig());
         when(environment.jersey()).thenReturn(jerseyEnvironment);
@@ -177,7 +177,7 @@ public abstract class DBShardingBundleBaseTest {
         List<OrderItem> orderItems = orderItemDao.select("customer1",
                                                         DetachedCriteria.forClass(OrderItem.class)
                                                             .createAlias("order", "o")
-                                                            .add(Restrictions.eq("o.orderId", "OD00001")));
+                                                            .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         orderItemDao.update("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
@@ -192,7 +192,7 @@ public abstract class DBShardingBundleBaseTest {
         orderItems = orderItemDao.select("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
                         .createAlias("order", "o")
-                        .add(Restrictions.eq("o.orderId", "OD00001")));
+                        .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         assertEquals("Item AA", orderItems.get(0).getName());
     }

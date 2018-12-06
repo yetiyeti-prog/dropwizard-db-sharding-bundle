@@ -19,9 +19,9 @@ package io.dropwizard.sharding.dao;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Audit;
 import io.dropwizard.sharding.dao.testdata.entities.Phone;
+import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
@@ -32,6 +32,7 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,6 +58,8 @@ public class LookupDaoTest {
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
+        configuration.setProperty("hibernate.show_sql", "true");
+        configuration.setProperty("hibernate.format_sql", "true");
         configuration.addAnnotatedClass(TestEntity.class);
         configuration.addAnnotatedClass(Phone.class);
         configuration.addAnnotatedClass(Transaction.class);
@@ -210,7 +213,7 @@ public class LookupDaoTest {
                                                         .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")));
+                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
         assertEquals("Started", audits.get(0).getText());
 
     }
@@ -231,11 +234,11 @@ public class LookupDaoTest {
         saveHierarchy("9986402019");
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                .add(Restrictions.eq("transaction.transactionId", "newTxn-" + phoneNumber)));
+                .add(Restrictions.eq("transaction.transactionId", "newTxn-" + phoneNumber)), 0, 10);
 
         assertEquals(2, audits.size());
 
-        List<Audit> allAudits = auditDao.scatterGather(DetachedCriteria.forClass(Audit.class));
+        List<Audit> allAudits = auditDao.scatterGather(DetachedCriteria.forClass(Audit.class), 0, 10);
         assertEquals(4, allAudits.size());
     }
 
@@ -261,5 +264,19 @@ public class LookupDaoTest {
         transaction.setAudits(ImmutableList.of(started, completed));
 
         transactionDao.save(phone, transaction);
+    }
+
+    @Test
+    public void deleteTest() throws Exception {
+        TestEntity testEntity = TestEntity.builder()
+                .externalId("testId")
+                .text("Some Text")
+                .build();
+        lookupDao.save(testEntity);
+        Assert.assertNotNull(lookupDao.get("testId")
+                .orElse(null));
+        Assert.assertTrue(lookupDao.delete("testId"));
+        Assert.assertNull(lookupDao.get("testId")
+                                     .orElse(null));
     }
 }

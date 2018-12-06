@@ -17,9 +17,9 @@
 
 package io.dropwizard.sharding.dao.testdata;
 
+import io.dropwizard.hibernate.AbstractDAO;
 import io.dropwizard.sharding.dao.testdata.entities.Order;
 import io.dropwizard.sharding.sharding.ShardedTransaction;
-import io.dropwizard.hibernate.AbstractDAO;
 import org.hibernate.SessionFactory;
 
 public class OrderDao extends AbstractDAO<Order> {

@@ -17,7 +17,7 @@ public class DbShardingBundleWithMultipleClassPath extends DBShardingBundleBaseT
 
     @Override
     protected DBShardingBundle<TestConfig> getBundle() {
-        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>(ImmutableList.of("io.dropwizard.sharding.dao.testdata.entities","io.dropwizard.sharding.dao.testdata.multi")) {
+        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>("io.dropwizard.sharding.dao.testdata.entities","io.dropwizard.sharding.dao.testdata.multi") {
             @Override
             protected ShardedHibernateFactory getConfig(DBShardingBundleBaseTest.TestConfig config) {
                 return testConfig.getShards();

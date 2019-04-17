@@ -1,6 +1,5 @@
 package io.dropwizard.sharding.bundle;
 
-import com.google.common.collect.ImmutableList;
 import io.dropwizard.sharding.DBShardingBundle;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.LookupDao;
@@ -17,7 +16,8 @@ public class DbShardingBundleWithMultipleClassPath extends DBShardingBundleBaseT
 
     @Override
     protected DBShardingBundle<TestConfig> getBundle() {
-        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>("io.dropwizard.sharding.dao.testdata.entities","io.dropwizard.sharding.dao.testdata.multi") {
+        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>(true,
+                                                                         "io.dropwizard.sharding.dao.testdata.entities", "io.dropwizard.sharding.dao.testdata.multi") {
             @Override
             protected ShardedHibernateFactory getConfig(DBShardingBundleBaseTest.TestConfig config) {
                 return testConfig.getShards();

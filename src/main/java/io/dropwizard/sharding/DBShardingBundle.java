@@ -33,10 +33,13 @@ import io.dropwizard.sharding.caching.LookupCache;
 import io.dropwizard.sharding.caching.RelationalCache;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.*;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
+import io.dropwizard.sharding.sharding.LegacyShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
@@ -50,6 +53,7 @@ import java.util.stream.Collectors;
 /**
  * A dropwizard bundle that provides sharding over normal RDBMS.
  */
+@Slf4j
 public abstract class DBShardingBundle<T extends Configuration> implements ConfiguredBundle<T> {
 
     private static final String DEFAULT_NAMESPACE = "default";
@@ -64,14 +68,22 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     @Getter
     private String dbNamespace;
 
-    public DBShardingBundle(String dbNamespace, Class<?> entity, Class<?>... entities) {
+    private boolean balancedAllocator;
+
+    public DBShardingBundle(
+            boolean balancedAllocator,
+            String dbNamespace,
+            Class<?> entity,
+            Class<?>... entities) {
         this.dbNamespace = dbNamespace;
+        this.balancedAllocator = balancedAllocator;
 
         val inEntities = ImmutableList.<Class<?>>builder().add(entity).add(entities).build();
         init(inEntities);
     }
 
-    public DBShardingBundle(String dbNamespace, List<String> classPathPrefixList) {
+    public DBShardingBundle(boolean balancedAllocator, String dbNamespace, List<String> classPathPrefixList) {
+        this.balancedAllocator = balancedAllocator;
         this.dbNamespace = dbNamespace;
         Set<Class<?>> entities = new Reflections(classPathPrefixList).getTypesAnnotatedWith(Entity.class);
         Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", String.join(",",classPathPrefixList)));
@@ -79,12 +91,13 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
         init(inEntities);
     }
 
-    public DBShardingBundle(Class<?> entity, Class<?>... entities) {
-        this(DEFAULT_NAMESPACE, entity, entities);
+    public DBShardingBundle(boolean balancedAllocator, Class<?> entity, Class<?>... entities) {
+        this(balancedAllocator, DEFAULT_NAMESPACE, entity, entities);
+        this.balancedAllocator = balancedAllocator;
     }
 
-    public DBShardingBundle(String... classPathPrefixes) {
-        this(DEFAULT_NAMESPACE, Arrays.asList(classPathPrefixes));
+    public DBShardingBundle(boolean balancedAllocator, String... classPathPrefixes) {
+        this(balancedAllocator, DEFAULT_NAMESPACE, Arrays.asList(classPathPrefixes));
     }
 
     private void init(final ImmutableList<Class<?>> inEntities) {
@@ -92,7 +105,7 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
                 System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
 
         int numShards = Integer.parseInt(numShardsEnv);
-        shardManager = new ShardManager(numShards);
+        shardManager = balancedAllocator ? new BalancedShardManager(numShards) : new LegacyShardManager(numShards);
         for (int i = 0; i < numShards; i++) {
             final int finalI = i;
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
@@ -128,7 +141,8 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
             try {
                 hibernateBundle.run(configuration, environment);
             } catch (Exception e) {
-                e.printStackTrace();
+                log.error("Error initializing db sharding bundle", e);
+                throw new RuntimeException(e);
             }
         });
     }
@@ -142,12 +156,14 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
     public static <EntityType, T extends Configuration>
     LookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
-        return new LookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+        return new LookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager));
     }
 
     public static <EntityType, T extends Configuration>
     CacheableLookupDao<EntityType> createParentObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, LookupCache<EntityType> cacheManager) {
-        return new CacheableLookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
+        return new CacheableLookupDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager), cacheManager);
     }
 
     public static <EntityType, T extends Configuration>
@@ -165,13 +181,15 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
     public static <EntityType, T extends Configuration>
     RelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz) {
-        return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+        return new RelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager));
     }
 
 
     public static <EntityType, T extends Configuration>
     CacheableRelationalDao<EntityType> createRelatedObjectDao(DBShardingBundle<T> bundle, Class<EntityType> clazz, RelationalCache<EntityType> cacheManager) {
-        return new CacheableRelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(), cacheManager);
+        return new CacheableRelationalDao<>(bundle.sessionFactories, clazz, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager), cacheManager);
     }
 
 
@@ -190,7 +208,8 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
 
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle, Class<DaoType> daoTypeClass) {
-        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>());
+        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager));
     }
 
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
@@ -203,7 +222,8 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
     public static <EntityType, DaoType extends AbstractDAO<EntityType>, T extends Configuration>
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundle<T> bundle, Class<DaoType> daoTypeClass,
                                                      Class[] extraConstructorParamClasses, Class[] extraConstructorParamObjects) {
-        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(),
+        return new WrapperDao<>(bundle.sessionFactories, daoTypeClass, bundle.shardManager, new ConsistentHashBucketIdExtractor<>(
+                bundle.shardManager),
                 extraConstructorParamClasses, extraConstructorParamObjects);
     }
 }

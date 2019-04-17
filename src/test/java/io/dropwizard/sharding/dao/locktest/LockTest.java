@@ -21,6 +21,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import io.dropwizard.sharding.dao.LookupDao;
 import io.dropwizard.sharding.dao.RelationalDao;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -67,7 +68,7 @@ public class LockTest {
             SessionFactory sessionFactory = buildSessionFactory(String.format("db_%d", i));
             sessionFactories.add(sessionFactory);
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
         lookupDao = new LookupDao<>(sessionFactories, SomeLookupObject.class, shardManager, Integer::parseInt);
         relationDao = new RelationalDao<>(sessionFactories, SomeOtherObject.class, shardManager, Integer::parseInt);
     }

@@ -12,7 +12,7 @@ public class DBShardingBundleWithEntityTest extends DBShardingBundleBaseTest {
 
     @Override
     protected DBShardingBundle<DBShardingBundleBaseTest.TestConfig> getBundle() {
-        return new DBShardingBundle<TestConfig>(Order.class, OrderItem.class) {
+        return new DBShardingBundle<TestConfig>(true, Order.class, OrderItem.class) {
             @Override
             protected ShardedHibernateFactory getConfig(TestConfig config) {
                 return testConfig.getShards();

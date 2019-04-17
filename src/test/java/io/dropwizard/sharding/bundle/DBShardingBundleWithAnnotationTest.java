@@ -10,7 +10,8 @@ public class DBShardingBundleWithAnnotationTest extends DBShardingBundleBaseTest
 
     @Override
     protected DBShardingBundle<DBShardingBundleBaseTest.TestConfig> getBundle() {
-        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>("io.dropwizard.sharding.dao.testdata.entities") {
+        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>(true,
+                                                                         "io.dropwizard.sharding.dao.testdata.entities") {
             @Override
             protected ShardedHibernateFactory getConfig(DBShardingBundleBaseTest.TestConfig config) {
                 return testConfig.getShards();

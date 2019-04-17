@@ -9,7 +9,7 @@ public class DBShardingBundleWithNamespaceTest extends DBShardingBundleBaseTest 
 
     @Override
     protected DBShardingBundle<DBShardingBundleBaseTest.TestConfig> getBundle() {
-        return new DBShardingBundle<TestConfig>("namespace", Order.class, OrderItem.class) {
+        return new DBShardingBundle<TestConfig>(true,"namespace", Order.class, OrderItem.class) {
             @Override
             protected ShardedHibernateFactory getConfig(TestConfig config) {
                 return testConfig.getShards();

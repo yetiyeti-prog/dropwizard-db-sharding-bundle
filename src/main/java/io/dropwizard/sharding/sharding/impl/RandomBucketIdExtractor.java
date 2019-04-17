@@ -28,8 +28,14 @@ import java.util.Random;
  */
 public class RandomBucketIdExtractor<T> implements BucketIdExtractor<T> {
     private Random random = new SecureRandom(Long.toBinaryString(System.currentTimeMillis()).getBytes());
+    private final ShardManager shardManager;
+
+    public RandomBucketIdExtractor(ShardManager shardManager) {
+        this.shardManager = shardManager;
+    }
+
     @Override
     public int bucketId(T key) {
-        return random.nextInt(ShardManager.MAX_BUCKET);
+        return random.nextInt(shardManager.maxBucketId());
     }
 }

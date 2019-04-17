@@ -19,6 +19,7 @@ package io.dropwizard.sharding.dao;
 
 import com.google.common.collect.Lists;
 import io.dropwizard.sharding.dao.testdata.entities.RelationalEntity;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import org.hibernate.SessionFactory;
@@ -61,8 +62,9 @@ public class RelationalDaoTest {
         for (int i = 0; i < 16; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        relationalDao = new RelationalDao<>(sessionFactories, RelationalEntity.class, shardManager, new ConsistentHashBucketIdExtractor<>());
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
+        relationalDao = new RelationalDao<>(sessionFactories, RelationalEntity.class, shardManager, new ConsistentHashBucketIdExtractor<>(
+                shardManager));
     }
 
     @After

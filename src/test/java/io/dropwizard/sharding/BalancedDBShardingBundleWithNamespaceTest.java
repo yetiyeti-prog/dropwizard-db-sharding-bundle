@@ -22,7 +22,7 @@ import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.testdata.entities.Order;
 import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
 
-public class BalancedDBShardingBundleWithNamespaceTest extends DBShardingBundleTest {
+public class BalancedDBShardingBundleWithNamespaceTest extends DBShardingBundleTestBase {
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {

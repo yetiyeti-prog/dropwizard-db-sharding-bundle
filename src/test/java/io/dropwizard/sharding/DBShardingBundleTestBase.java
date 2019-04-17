@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
  * Top level test. Saves an order using custom dao to a shard belonging to a particular customer.
  * Core systems are not mocked. Uses H2 for testing.
  */
-public abstract class DBShardingBundleTest {
+public abstract class DBShardingBundleTestBase {
     protected static class TestConfig extends Configuration {
         @Getter
         private ShardedHibernateFactory shards = new ShardedHibernateFactory();

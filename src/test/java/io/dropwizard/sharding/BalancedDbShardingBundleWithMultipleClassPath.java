@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 
-public class BalancedDbShardingBundleWithMultipleClassPath extends DBShardingBundleTest {
+public class BalancedDbShardingBundleWithMultipleClassPath extends DBShardingBundleTestBase {
 
 
 

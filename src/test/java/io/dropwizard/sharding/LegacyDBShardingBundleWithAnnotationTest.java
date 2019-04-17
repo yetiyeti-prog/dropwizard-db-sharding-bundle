@@ -22,13 +22,13 @@ import io.dropwizard.sharding.config.ShardedHibernateFactory;
 /**
  * Created by tushar.mandar on 4/25/17.
  */
-public class LegacyDBShardingBundleWithAnnotationTest extends DBShardingBundleTest {
+public class LegacyDBShardingBundleWithAnnotationTest extends DBShardingBundleTestBase {
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {
         return new DBShardingBundle<TestConfig>("io.dropwizard.sharding.dao.testdata.entities") {
             @Override
-            protected ShardedHibernateFactory getConfig(DBShardingBundleTest.TestConfig config) {
+            protected ShardedHibernateFactory getConfig(DBShardingBundleTestBase.TestConfig config) {
                 return testConfig.getShards();
             }
         };

@@ -22,7 +22,7 @@ import io.dropwizard.sharding.config.ShardedHibernateFactory;
 /**
  * Created by tushar.mandar on 4/25/17.
  */
-public class BalancedDBShardingBundleWithAnnotationTest extends DBShardingBundleTest {
+public class BalancedDBShardingBundleWithAnnotationTest extends DBShardingBundleTestBase {
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {

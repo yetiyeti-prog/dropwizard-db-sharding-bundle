@@ -24,7 +24,7 @@ import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
 /**
  * Created by tushar.mandar on 4/25/17.
  */
-public class BalancedDBShardingBundleWithEntityTest extends DBShardingBundleTest {
+public class BalancedDBShardingBundleWithEntityTest extends DBShardingBundleTestBase {
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {

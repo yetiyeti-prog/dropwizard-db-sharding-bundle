@@ -26,7 +26,7 @@ import org.junit.Test;
 
 import java.util.Optional;
 
-public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundleTest {
+public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundleTestBase {
 
 
 
@@ -34,7 +34,7 @@ public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundl
     protected DBShardingBundleBase<TestConfig> getBundle() {
         return new DBShardingBundle<TestConfig>("io.dropwizard.sharding.dao.testdata.entities", "io.dropwizard.sharding.dao.testdata.multi") {
             @Override
-            protected ShardedHibernateFactory getConfig(DBShardingBundleTest.TestConfig config) {
+            protected ShardedHibernateFactory getConfig(DBShardingBundleTestBase.TestConfig config) {
                 return testConfig.getShards();
             }
         };

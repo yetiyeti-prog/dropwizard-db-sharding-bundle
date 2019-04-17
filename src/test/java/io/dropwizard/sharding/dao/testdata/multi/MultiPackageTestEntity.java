@@ -1,6 +1,5 @@
 package io.dropwizard.sharding.dao.testdata.multi;
 
-import io.dropwizard.sharding.dao.testdata.entities.Transaction;
 import io.dropwizard.sharding.sharding.LookupKey;
 import lombok.*;
 

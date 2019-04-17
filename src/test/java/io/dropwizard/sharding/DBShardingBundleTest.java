@@ -27,8 +27,6 @@ import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import io.dropwizard.sharding.DBShardingBundle;
-import io.dropwizard.sharding.DBShardingBundleBase;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.RelationalDao;
 import io.dropwizard.sharding.dao.WrapperDao;

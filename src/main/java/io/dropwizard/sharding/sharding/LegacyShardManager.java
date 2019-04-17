@@ -51,34 +51,21 @@ public class LegacyShardManager implements ShardManager {
         int shardCounter = 0;
         boolean endReached = false;
         boolean altAssignment = ((MAX_BUCKET - (interval * numShards)) > interval);
-        if(!altAssignment) {
-            for (int start = MIN_BUCKET; !endReached; start += interval, shardCounter++) {
-                int remaining = MAX_BUCKET - start;
-                log.trace("Remaining: {}. Interval: {}, 2x Interval: {}", remaining, interval, 2 * interval);
-                int end = start + interval - 1;
-                endReached = !((MAX_BUCKET - start) > (2 * interval));
-                end = endReached
-                        ? end + MAX_BUCKET - end
-                        : end;
-                log.trace("Assigning {} to {} to shard {}", start, end, shardCounter);
-                //End is reached when remaining items (max -
-                assignedBuckets.put(Range.closed(start, end), shardCounter);
-            }
+        for (int start = MIN_BUCKET; !endReached; start += interval, shardCounter++) {
+            int remaining = MAX_BUCKET - start;
+            log.trace("Remaining: {}. Interval: {}, 2x Interval: {}", remaining, interval, 2 * interval);
+            int end = start + interval - 1;
+            endReached = shardCounter == numShards - 1;
+            end = endReached
+                    ? MAX_BUCKET
+                    : end;
+            log.trace("Assigning {} elements, from {} to {} into shard {}", end - start + 1, start, end, shardCounter);
+            //End is reached when remaining items (max -
+            assignedBuckets.put(Range.closed(start, end), shardCounter);
         }
-        else  {
-            assignedBuckets.clear();
-            interval += ((MAX_BUCKET - (interval * numShards)) / numShards);
-            shardCounter = 0;
-            log.info("Adjusting interval to {}", interval);
-            endReached = false;
-            for(int start = MIN_BUCKET; !endReached; start+= interval, shardCounter++ ) {
-                int end = start + interval - 1;
-                end = (shardCounter == numShards - 1) ? MAX_BUCKET : end;
-                endReached = end == MAX_BUCKET;
-                log.trace("ALT::Assigning {} to {} to shard {}", start, end, shardCounter);
-                assignedBuckets.put(Range.closed(start, end), shardCounter);
-            }
-        }
+        Preconditions.checkArgument(assignedBuckets.asMapOfRanges().size() == numShards,
+                                    "There is an issue in shard allocation. " +
+                                            "Not all shards have been allocated to. Please contact devs.");
         buckets.putAll(assignedBuckets);
         log.info("Buckets to shard allocation: {}", buckets);
     }

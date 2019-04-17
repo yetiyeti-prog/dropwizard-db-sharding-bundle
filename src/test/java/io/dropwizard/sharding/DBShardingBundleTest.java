@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Santanu Sinha <santanu.sinha@gmail.com>
+ * Copyright 2019 Santanu Sinha <santanu.sinha@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  *
  */
 
-package io.dropwizard.sharding.bundle;
+package io.dropwizard.sharding;
 
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.google.common.collect.ImmutableList;
@@ -28,14 +28,13 @@ import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.dropwizard.sharding.DBShardingBundle;
+import io.dropwizard.sharding.DBShardingBundleBase;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.dropwizard.sharding.dao.LookupDao;
 import io.dropwizard.sharding.dao.RelationalDao;
 import io.dropwizard.sharding.dao.WrapperDao;
 import io.dropwizard.sharding.dao.testdata.OrderDao;
 import io.dropwizard.sharding.dao.testdata.entities.Order;
 import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
-import io.dropwizard.sharding.dao.testdata.multi.MultiPackageTestEntity;
 import lombok.Getter;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
@@ -56,13 +55,13 @@ import static org.mockito.Mockito.when;
  * Top level test. Saves an order using custom dao to a shard belonging to a particular customer.
  * Core systems are not mocked. Uses H2 for testing.
  */
-public abstract class DBShardingBundleBaseTest {
-    static class TestConfig extends Configuration {
+public abstract class DBShardingBundleTest {
+    protected static class TestConfig extends Configuration {
         @Getter
         private ShardedHibernateFactory shards = new ShardedHibernateFactory();
     }
 
-    final TestConfig testConfig = new TestConfig();
+    protected final TestConfig testConfig = new TestConfig();
     private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
     private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
@@ -70,7 +69,7 @@ public abstract class DBShardingBundleBaseTest {
     protected final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
-    protected abstract DBShardingBundle<TestConfig> getBundle();
+    protected abstract DBShardingBundleBase<TestConfig> getBundle();
 
     private DataSourceFactory createConfig(String dbName) {
         Map<String, String> properties = Maps.newHashMap();
@@ -98,7 +97,7 @@ public abstract class DBShardingBundleBaseTest {
 
     @Test
     public void testBundle() throws Exception {
-        DBShardingBundle<TestConfig> bundle = getBundle();
+        DBShardingBundleBase<TestConfig> bundle = getBundle();
         bundle.initialize(bootstrap);
         bundle.initBundles(bootstrap);
         bundle.runBundles(testConfig, environment);

@@ -24,11 +24,11 @@ import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.utils.ShardCalculator;
 import io.dropwizard.sharding.utils.Transactions;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
+import org.hibernate.*;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
@@ -85,11 +85,36 @@ public class RelationalDao<T> {
             currentSession().update(entity);
         }
 
+        void update(List<T> oldEntities, List<T> entities) {
+            for (T oldEntity : oldEntities) {
+                currentSession().evict(oldEntity);
+            }
+
+            if (entities != null) {
+                for (T entity : entities) {
+                    currentSession().update(entity);
+                }
+            }
+        }
+
+        void update(List<T> entities) {
+            if (entities != null) {
+                for (T entity : entities) {
+                    currentSession().update(entity);
+                }
+            }
+        }
+
         List<T> select(SelectParamPriv selectParam) {
             val criteria = selectParam.criteria.getExecutableCriteria(currentSession());
             criteria.setFirstResult(selectParam.start);
             criteria.setMaxResults(selectParam.numRows);
             return list(criteria);
+        }
+
+        ScrollableResults scroll(ScrollParamPriv scrollDetails) {
+            final Criteria criteria = scrollDetails.getCriteria().getExecutableCriteria(currentSession());
+            return criteria.scroll(scrollDetails.getScrollMode());
         }
 
         long count(DetachedCriteria criteria) {
@@ -105,6 +130,15 @@ public class RelationalDao<T> {
         DetachedCriteria criteria;
         int start;
         int numRows;
+    }
+
+    @Builder
+    private static class ScrollParamPriv {
+        @Getter
+        private DetachedCriteria criteria;
+
+        @Getter
+        private ScrollMode scrollMode;
     }
 
     private List<RelationalDaoPriv> daos;
@@ -182,6 +216,44 @@ public class RelationalDao<T> {
         return update(context.getSessionFactory(), dao, id, updater, false);
     }
 
+    <U> boolean scrollAndUpdate(LookupDao.LockedContext<U> context, DetachedCriteria criteria, ScrollMode scrollMode, Function<ScrollableResults,List<T>> updater) {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+
+        try {
+            final ScrollParamPriv scrollParam = ScrollParamPriv.builder()
+                    .criteria(criteria)
+                    .scrollMode(scrollMode)
+                    .build();
+
+            return Transactions.<ScrollableResults, ScrollParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::scroll, scrollParam, scrollableResults -> {
+                final List<T> newEntityList = updater.apply(scrollableResults);
+                dao.update(newEntityList);
+                return true;
+            }, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with scroll: " + criteria, e);
+        }
+    }
+
+    <U> boolean updateAll(LookupDao.LockedContext<U> context, DetachedCriteria criteria, int start, int numRows, Function<List<T>, List<T>> updater) {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+
+        try {
+            final SelectParamPriv selectParam = SelectParamPriv.builder()
+                    .criteria(criteria)
+                    .start(start)
+                    .numRows(numRows)
+                    .build();
+            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::select, selectParam, entityList -> {
+                final List<T> newEntityList = updater.apply(entityList);
+                dao.update(entityList, newEntityList);
+                return true;
+            }, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
+        }
+    }
+
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = ShardCalculator.shardId(shardManager, bucketIdExtractor, parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
@@ -236,6 +308,43 @@ public class RelationalDao<T> {
                 dao.update(oldEntity, newEntity);
                 return true;
             });
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
+        }
+    }
+
+    <U> boolean selectAndUpdateOrSave(LookupDao.LockedContext<U> context, DetachedCriteria criteria, Function<T, T> updater) {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+
+        try {
+            final SelectParamPriv selectParam = SelectParamPriv.builder()
+                    .criteria(criteria)
+                    .start(0)
+                    .numRows(1)
+                    .build();
+            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::select, selectParam, (List<T> entityList) -> {
+                if(entityList == null || entityList.isEmpty()) {
+                    final T newEntity = updater.apply(null);
+
+                    if (newEntity != null) {
+                        dao.save(newEntity);
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                final T oldEntity = entityList.get(0);
+                if(null == oldEntity) {
+                    return false;
+                }
+                final T newEntity = updater.apply(oldEntity);
+                if(null == newEntity) {
+                    return false;
+                }
+                dao.update(oldEntity, newEntity);
+                return true;
+            }, false);
         } catch (Exception e) {
             throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
         }

@@ -30,9 +30,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.hibernate.LockMode;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
+import org.hibernate.*;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
 
@@ -423,6 +421,39 @@ public class LookupDao<T> {
             return apply(parent-> {
                 try {
                     relationalDao.update(this, id, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> selectAndUpdateOrSave(RelationalDao<U> relationalDao, DetachedCriteria criteria, Function<U, U> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.selectAndUpdateOrSave(this, criteria, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> scrollAndUpdate(RelationalDao<U> relationalDao, DetachedCriteria criteria, ScrollMode scrollMode, Function<ScrollableResults,List<U>> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.scrollAndUpdate(this, criteria, scrollMode, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> updateAll(RelationalDao<U> relationalDao, DetachedCriteria criteria, int start, int numRows, Function<List<U>, List<U>> handler) {
+            return apply(parent-> {
+                try {
+                    relationalDao.updateAll(this, criteria, start, numRows, handler);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

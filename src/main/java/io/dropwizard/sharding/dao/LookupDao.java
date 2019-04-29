@@ -39,8 +39,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -428,10 +430,13 @@ public class LookupDao<T> {
             });
         }
 
-        public<U> LockedContext<T> selectAndUpdateOrSave(RelationalDao<U> relationalDao, DetachedCriteria criteria, Function<U, U> handler) {
+        public<U> LockedContext<T> createOrUpdate(RelationalDao<U> relationalDao,
+                                                  DetachedCriteria criteria,
+                                                  Function<U, U> updater,
+                                                  Supplier<U> entityGenerator) {
             return apply(parent-> {
                 try {
-                    relationalDao.selectAndUpdateOrSave(this, criteria, handler);
+                    relationalDao.createOrUpdate(this, criteria, updater, entityGenerator);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -439,21 +444,13 @@ public class LookupDao<T> {
             });
         }
 
-        public<U> LockedContext<T> scrollAndUpdate(RelationalDao<U> relationalDao, DetachedCriteria criteria, ScrollMode scrollMode, Function<ScrollableResults,List<U>> handler) {
+        public<U> LockedContext<T> update(RelationalDao<U> relationalDao,
+                                          DetachedCriteria criteria,
+                                          Function<U, U> updater,
+                                          BooleanSupplier updateNext) {
             return apply(parent-> {
                 try {
-                    relationalDao.scrollAndUpdate(this, criteria, scrollMode, handler);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                return null;
-            });
-        }
-
-        public<U> LockedContext<T> updateAll(RelationalDao<U> relationalDao, DetachedCriteria criteria, int start, int numRows, Function<List<U>, List<U>> handler) {
-            return apply(parent-> {
-                try {
-                    relationalDao.updateAll(this, criteria, start, numRows, handler);
+                    relationalDao.update(this, criteria, updater, updateNext);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

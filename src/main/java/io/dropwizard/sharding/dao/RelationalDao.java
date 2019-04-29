@@ -38,7 +38,9 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -85,26 +87,6 @@ public class RelationalDao<T> {
             currentSession().update(entity);
         }
 
-        void update(List<T> oldEntities, List<T> entities) {
-            for (T oldEntity : oldEntities) {
-                currentSession().evict(oldEntity);
-            }
-
-            if (entities != null) {
-                for (T entity : entities) {
-                    currentSession().update(entity);
-                }
-            }
-        }
-
-        void update(List<T> entities) {
-            if (entities != null) {
-                for (T entity : entities) {
-                    currentSession().update(entity);
-                }
-            }
-        }
-
         List<T> select(SelectParamPriv selectParam) {
             val criteria = selectParam.criteria.getExecutableCriteria(currentSession());
             criteria.setFirstResult(selectParam.start);
@@ -114,7 +96,7 @@ public class RelationalDao<T> {
 
         ScrollableResults scroll(ScrollParamPriv scrollDetails) {
             final Criteria criteria = scrollDetails.getCriteria().getExecutableCriteria(currentSession());
-            return criteria.scroll(scrollDetails.getScrollMode());
+            return criteria.scroll(ScrollMode.FORWARD_ONLY);
         }
 
         long count(DetachedCriteria criteria) {
@@ -136,9 +118,6 @@ public class RelationalDao<T> {
     private static class ScrollParamPriv {
         @Getter
         private DetachedCriteria criteria;
-
-        @Getter
-        private ScrollMode scrollMode;
     }
 
     private List<RelationalDaoPriv> daos;
@@ -216,41 +195,36 @@ public class RelationalDao<T> {
         return update(context.getSessionFactory(), dao, id, updater, false);
     }
 
-    <U> boolean scrollAndUpdate(LookupDao.LockedContext<U> context, DetachedCriteria criteria, ScrollMode scrollMode, Function<ScrollableResults,List<T>> updater) {
+    <U> boolean update(LookupDao.LockedContext<U> context,
+                       DetachedCriteria criteria,
+                       Function<T, T> updater,
+                       BooleanSupplier updateNext) {
         final RelationalDaoPriv dao = daos.get(context.getShardId());
 
         try {
             final ScrollParamPriv scrollParam = ScrollParamPriv.builder()
                     .criteria(criteria)
-                    .scrollMode(scrollMode)
                     .build();
 
             return Transactions.<ScrollableResults, ScrollParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::scroll, scrollParam, scrollableResults -> {
-                final List<T> newEntityList = updater.apply(scrollableResults);
-                dao.update(newEntityList);
+                while(scrollableResults.next() && updateNext.getAsBoolean()) {
+                    final T entity = (T) scrollableResults.get(0);
+                    if (null == entity) {
+                        return false;
+                    }
+
+                    final T newEntity = updater.apply(entity);
+                    if(null == newEntity) {
+                        return false;
+                    }
+
+                    dao.update(entity, newEntity);
+                }
+
                 return true;
             }, false);
         } catch (Exception e) {
             throw new RuntimeException("Error updating entity with scroll: " + criteria, e);
-        }
-    }
-
-    <U> boolean updateAll(LookupDao.LockedContext<U> context, DetachedCriteria criteria, int start, int numRows, Function<List<T>, List<T>> updater) {
-        final RelationalDaoPriv dao = daos.get(context.getShardId());
-
-        try {
-            final SelectParamPriv selectParam = SelectParamPriv.builder()
-                    .criteria(criteria)
-                    .start(start)
-                    .numRows(numRows)
-                    .build();
-            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::select, selectParam, entityList -> {
-                final List<T> newEntityList = updater.apply(entityList);
-                dao.update(entityList, newEntityList);
-                return true;
-            }, false);
-        } catch (Exception e) {
-            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
         }
     }
 
@@ -313,7 +287,10 @@ public class RelationalDao<T> {
         }
     }
 
-    <U> boolean selectAndUpdateOrSave(LookupDao.LockedContext<U> context, DetachedCriteria criteria, Function<T, T> updater) {
+    <U> boolean createOrUpdate(LookupDao.LockedContext<U> context,
+                               DetachedCriteria criteria,
+                               Function<T, T> updater,
+                               Supplier<T> entityGenerator) {
         final RelationalDaoPriv dao = daos.get(context.getShardId());
 
         try {
@@ -322,16 +299,14 @@ public class RelationalDao<T> {
                     .start(0)
                     .numRows(1)
                     .build();
+
             return Transactions.<List<T>, SelectParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::select, selectParam, (List<T> entityList) -> {
                 if(entityList == null || entityList.isEmpty()) {
-                    final T newEntity = updater.apply(null);
-
-                    if (newEntity != null) {
-                        dao.save(newEntity);
-                        return true;
-                    }
-
-                    return false;
+                    Preconditions.checkNotNull(entityGenerator, "Entity generator can't be null");
+                    final T newEntity = entityGenerator.get();
+                    Preconditions.checkNotNull(newEntity, "Generated entity can't be null");
+                    dao.save(newEntity);
+                    return true;
                 }
 
                 final T oldEntity = entityList.get(0);

@@ -207,7 +207,10 @@ public class RelationalDao<T> {
                     .build();
 
             return Transactions.<ScrollableResults, ScrollParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::scroll, scrollParam, scrollableResults -> {
-                while(scrollableResults.next() && updateNext.getAsBoolean()) {
+
+                boolean updateNextObject = true;
+
+                while(scrollableResults.next() && updateNextObject) {
                     final T entity = (T) scrollableResults.get(0);
                     if (null == entity) {
                         return false;
@@ -219,6 +222,8 @@ public class RelationalDao<T> {
                     }
 
                     dao.update(entity, newEntity);
+
+                    updateNextObject = updateNext.getAsBoolean();
                 }
 
                 return true;

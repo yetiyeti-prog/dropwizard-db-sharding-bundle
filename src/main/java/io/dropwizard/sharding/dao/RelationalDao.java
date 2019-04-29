@@ -226,6 +226,8 @@ public class RelationalDao<T> {
                     updateNextObject = updateNext.getAsBoolean();
                 }
 
+                scrollableResults.close();
+
                 return true;
             }, false);
         } catch (Exception e) {

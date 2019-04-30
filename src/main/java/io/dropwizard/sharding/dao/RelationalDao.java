@@ -207,27 +207,24 @@ public class RelationalDao<T> {
                     .build();
 
             return Transactions.<ScrollableResults, ScrollParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::scroll, scrollParam, scrollableResults -> {
-
                 boolean updateNextObject = true;
-
-                while(scrollableResults.next() && updateNextObject) {
-                    final T entity = (T) scrollableResults.get(0);
-                    if (null == entity) {
-                        return false;
+                try {
+                    while(scrollableResults.next() && updateNextObject) {
+                        final T entity = (T) scrollableResults.get(0);
+                        if (null == entity) {
+                            return false;
+                        }
+                        final T newEntity = updater.apply(entity);
+                        if(null == newEntity) {
+                            return false;
+                        }
+                        dao.update(entity, newEntity);
+                        updateNextObject = updateNext.getAsBoolean();
                     }
-
-                    final T newEntity = updater.apply(entity);
-                    if(null == newEntity) {
-                        return false;
-                    }
-
-                    dao.update(entity, newEntity);
-
-                    updateNextObject = updateNext.getAsBoolean();
                 }
-
-                scrollableResults.close();
-
+                finally {
+                    scrollableResults.close();
+                }
                 return true;
             }, false);
         } catch (Exception e) {

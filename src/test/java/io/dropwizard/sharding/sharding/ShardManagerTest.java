@@ -27,14 +27,14 @@ public class ShardManagerTest {
 
    @Test
     public void testShardForBucket() throws Exception {
-        ShardManager shardManager = new ShardManager(5);
+        ShardManager shardManager = new LegacyShardManager(8);
         System.out.println(shardManager);
         assertEquals(0, shardManager.shardForBucket(100));
     }
 
     @Test
     public void testBlacklisting() throws Exception {
-        ShardManager shardManager = new ShardManager(5);
+        ShardManager shardManager = new LegacyShardManager(8);
         System.out.println(shardManager);
         assertEquals(0, shardManager.shardForBucket(100));
         shardManager.blacklistShard(0);

@@ -19,6 +19,7 @@ package io.dropwizard.sharding.dao;
 
 import com.google.common.collect.Lists;
 import io.dropwizard.sharding.dao.testdata.entities.RelationalEntity;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -43,9 +44,9 @@ public class RelationalDaoTest {
     private SessionFactory buildSessionFactory(String dbName) {
         Configuration configuration = new Configuration();
         configuration.setProperty("hibernate.dialect",
-                "org.hibernate.dialect.H2Dialect");
+                                  "org.hibernate.dialect.H2Dialect");
         configuration.setProperty("hibernate.connection.driver_class",
-                "org.h2.Driver");
+                                  "org.h2.Driver");
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
@@ -53,7 +54,8 @@ public class RelationalDaoTest {
 
         StandardServiceRegistry serviceRegistry
                 = new StandardServiceRegistryBuilder().applySettings(
-                configuration.getProperties()).build();
+                configuration.getProperties())
+                .build();
         return configuration.buildSessionFactory(serviceRegistry);
     }
 
@@ -62,8 +64,11 @@ public class RelationalDaoTest {
         for (int i = 0; i < 16; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        relationalDao = new RelationalDao<>(sessionFactories, RelationalEntity.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()));
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
+        relationalDao = new RelationalDao<>(sessionFactories,
+                                            RelationalEntity.class,
+                                            new ShardCalculator<>(shardManager,
+                                                                  new ConsistentHashBucketIdExtractor<>(shardManager)));
     }
 
     @After
@@ -83,7 +88,10 @@ public class RelationalDaoTest {
                 .value("abcd")
                 .build();
         relationalDao.saveAll(key, Lists.newArrayList(entityOne, entityTwo));
-        List<RelationalEntity> entities = relationalDao.select(key, DetachedCriteria.forClass(RelationalEntity.class), 0, 10);
+        List<RelationalEntity> entities = relationalDao.select(key,
+                                                               DetachedCriteria.forClass(RelationalEntity.class),
+                                                               0,
+                                                               10);
         assertEquals(2, entities.size());
 
     }

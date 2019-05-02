@@ -25,6 +25,7 @@ import io.dropwizard.sharding.dao.testdata.entities.Audit;
 import io.dropwizard.sharding.dao.testdata.entities.Phone;
 import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -57,9 +58,9 @@ public class CacheableLookupDaoTest {
     private SessionFactory buildSessionFactory(String dbName) {
         Configuration configuration = new Configuration();
         configuration.setProperty("hibernate.dialect",
-                "org.hibernate.dialect.H2Dialect");
+                                  "org.hibernate.dialect.H2Dialect");
         configuration.setProperty("hibernate.connection.driver_class",
-                "org.h2.Driver");
+                                  "org.h2.Driver");
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
@@ -70,7 +71,8 @@ public class CacheableLookupDaoTest {
 
         StandardServiceRegistry serviceRegistry
                 = new StandardServiceRegistryBuilder().applySettings(
-                            configuration.getProperties()).build();
+                configuration.getProperties())
+                .build();
         return configuration.buildSessionFactory(serviceRegistry);
     }
 
@@ -80,124 +82,174 @@ public class CacheableLookupDaoTest {
         for (int i = 0; i < 2; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
         lookupDao = new CacheableLookupDao<>(
-                sessionFactories, TestEntity.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new LookupCache<TestEntity>() {
+                sessionFactories,
+                TestEntity.class,
+                new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>(shardManager)),
+                new LookupCache<TestEntity>() {
 
-            private Map<String, TestEntity> cache = new HashMap<>();
+                    private Map<String, TestEntity> cache = new HashMap<>();
 
-            @Override
-            public void put(String key, TestEntity entity) {
-                cache.put(key, entity);
-            }
+                    @Override
+                    public void put(String key, TestEntity entity) {
+                        cache.put(key, entity);
+                    }
 
-            @Override
-            public boolean exists(String key) {
-                return cache.containsKey(key);
-            }
+                    @Override
+                    public boolean exists(String key) {
+                        return cache.containsKey(key);
+                    }
 
-            @Override
-            public TestEntity get(String key) {
-                return cache.get(key);
-            }
-        });
-        phoneDao = new CacheableLookupDao<>(sessionFactories, Phone.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new LookupCache<Phone>() {
+                    @Override
+                    public TestEntity get(String key) {
+                        return cache.get(key);
+                    }
+                });
+        phoneDao = new CacheableLookupDao<>(sessionFactories,
+                                            Phone.class,
+                                            new ShardCalculator<>(shardManager,
+                                                                  new ConsistentHashBucketIdExtractor<>(shardManager)),
+                                            new LookupCache<Phone>() {
 
-            private Map<String, Phone> cache = new HashMap<>();
+                                                private Map<String, Phone> cache = new HashMap<>();
 
-            @Override
-            public void put(String key, Phone entity) {
-                cache.put(key, entity);
-            }
+                                                @Override
+                                                public void put(String key, Phone entity) {
+                                                    cache.put(key, entity);
+                                                }
 
-            @Override
-            public boolean exists(String key) {
-                return cache.containsKey(key);
-            }
+                                                @Override
+                                                public boolean exists(String key) {
+                                                    return cache.containsKey(key);
+                                                }
 
-            @Override
-            public Phone get(String key) {
-                return cache.get(key);
-            }
-        });
-        transactionDao = new CacheableRelationalDao<>(sessionFactories, Transaction.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new RelationalCache<Transaction>() {
+                                                @Override
+                                                public Phone get(String key) {
+                                                    return cache.get(key);
+                                                }
+                                            });
+        transactionDao = new CacheableRelationalDao<>(sessionFactories,
+                                                      Transaction.class,
+                                                      new ShardCalculator<>(shardManager,
+                                                                            new ConsistentHashBucketIdExtractor<>(
+                                                                                    shardManager)),
+                                                      new RelationalCache<Transaction>() {
 
-            private Map<String, Object> cache = new HashMap<>();
+                                                          private Map<String, Object> cache = new HashMap<>();
 
-            @Override
-            public void put(String parentKey, Object key, Transaction entity) {
-                cache.put(StringUtils.join(parentKey, key, ':'), entity);
-            }
+                                                          @Override
+                                                          public void put(
+                                                                  String parentKey,
+                                                                  Object key,
+                                                                  Transaction entity) {
+                                                              cache.put(StringUtils.join(parentKey, key, ':'), entity);
+                                                          }
 
-            @Override
-            public void put(String parentKey, List<Transaction> entities) {
-                cache.put(parentKey, entities);
-            }
+                                                          @Override
+                                                          public void put(
+                                                                  String parentKey,
+                                                                  List<Transaction> entities) {
+                                                              cache.put(parentKey, entities);
+                                                          }
 
-            @Override
-            public void put(String parentKey, int first, int numResults, List<Transaction> entities) {
-                cache.put(StringUtils.join(parentKey, first, numResults, ':'), entities);
-            }
+                                                          @Override
+                                                          public void put(
+                                                                  String parentKey,
+                                                                  int first,
+                                                                  int numResults,
+                                                                  List<Transaction> entities) {
+                                                              cache.put(StringUtils.join(parentKey,
+                                                                                         first,
+                                                                                         numResults,
+                                                                                         ':'), entities);
+                                                          }
 
-            @Override
-            public boolean exists(String parentKey, Object key) {
-                return cache.containsKey(StringUtils.join(parentKey, key, ':'));
-            }
+                                                          @Override
+                                                          public boolean exists(String parentKey, Object key) {
+                                                              return cache.containsKey(StringUtils.join(parentKey,
+                                                                                                        key,
+                                                                                                        ':'));
+                                                          }
 
-            @Override
-            public Transaction get(String parentKey, Object key) {
-                return (Transaction) cache.get(StringUtils.join(parentKey, key, ':'));
-            }
+                                                          @Override
+                                                          public Transaction get(String parentKey, Object key) {
+                                                              return (Transaction) cache.get(StringUtils.join(parentKey,
+                                                                                                              key,
+                                                                                                              ':'));
+                                                          }
 
-            @Override
-            public List<Transaction> select(String parentKey) {
-                return (List<Transaction>) cache.get(parentKey);
-            }
+                                                          @Override
+                                                          public List<Transaction> select(String parentKey) {
+                                                              return (List<Transaction>) cache.get(parentKey);
+                                                          }
 
-            @Override
-            public List<Transaction> select(String parentKey, int first, int numResults) {
-                return (List<Transaction>) cache.get(StringUtils.join(parentKey, first, numResults, ':'));
-            }
-        });
-        auditDao = new CacheableRelationalDao<>(sessionFactories, Audit.class, new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()), new RelationalCache<Audit>() {
+                                                          @Override
+                                                          public List<Transaction> select(
+                                                                  String parentKey,
+                                                                  int first,
+                                                                  int numResults) {
+                                                              return (List<Transaction>) cache.get(StringUtils.join(
+                                                                      parentKey,
+                                                                      first,
+                                                                      numResults,
+                                                                      ':'));
+                                                          }
+                                                      });
+        auditDao = new CacheableRelationalDao<>(sessionFactories,
+                                                Audit.class,
+                                                new ShardCalculator<>(shardManager,
+                                                                      new ConsistentHashBucketIdExtractor<>(shardManager)),
+                                                new RelationalCache<Audit>() {
 
-            private Map<String, Object> cache = new HashMap<>();
+                                                    private Map<String, Object> cache = new HashMap<>();
 
-            @Override
-            public void put(String parentKey, Object key, Audit entity) {
-                cache.put(StringUtils.join(parentKey, key, ':'), entity);
-            }
+                                                    @Override
+                                                    public void put(String parentKey, Object key, Audit entity) {
+                                                        cache.put(StringUtils.join(parentKey, key, ':'), entity);
+                                                    }
 
-            @Override
-            public void put(String parentKey, List<Audit> entities) {
-                cache.put(parentKey, entities);
-            }
+                                                    @Override
+                                                    public void put(String parentKey, List<Audit> entities) {
+                                                        cache.put(parentKey, entities);
+                                                    }
 
-            @Override
-            public void put(String parentKey, int first, int numResults, List<Audit> entities) {
-                cache.put(StringUtils.join(parentKey, first, numResults, ':'), entities);
-            }
+                                                    @Override
+                                                    public void put(
+                                                            String parentKey,
+                                                            int first,
+                                                            int numResults,
+                                                            List<Audit> entities) {
+                                                        cache.put(StringUtils.join(parentKey, first, numResults, ':'),
+                                                                  entities);
+                                                    }
 
-            @Override
-            public boolean exists(String parentKey, Object key) {
-                return cache.containsKey(StringUtils.join(parentKey, key, ':'));
-            }
+                                                    @Override
+                                                    public boolean exists(String parentKey, Object key) {
+                                                        return cache.containsKey(StringUtils.join(parentKey, key, ':'));
+                                                    }
 
-            @Override
-            public Audit get(String parentKey, Object key) {
-                return (Audit) cache.get(StringUtils.join(parentKey, key, ':'));
-            }
+                                                    @Override
+                                                    public Audit get(String parentKey, Object key) {
+                                                        return (Audit) cache.get(StringUtils.join(parentKey, key, ':'));
+                                                    }
 
-            @Override
-            public List<Audit> select(String parentKey) {
-                return (List<Audit>) cache.get(parentKey);
-            }
+                                                    @Override
+                                                    public List<Audit> select(String parentKey) {
+                                                        return (List<Audit>) cache.get(parentKey);
+                                                    }
 
-            @Override
-            public List<Audit> select(String parentKey, int first, int numResults) {
-                return (List<Audit>) cache.get(StringUtils.join(parentKey, first, numResults, ':'));
-            }
-        });
+                                                    @Override
+                                                    public List<Audit> select(
+                                                            String parentKey,
+                                                            int first,
+                                                            int numResults) {
+                                                        return (List<Audit>) cache.get(StringUtils.join(parentKey,
+                                                                                                        first,
+                                                                                                        numResults,
+                                                                                                        ':'));
+                                                    }
+                                                });
     }
 
     @After
@@ -208,23 +260,27 @@ public class CacheableLookupDaoTest {
     @Test
     public void testSave() throws Exception {
         TestEntity testEntity = TestEntity.builder()
-                                    .externalId("testId")
-                                    .text("Some Text")
-                                    .build();
+                .externalId("testId")
+                .text("Some Text")
+                .build();
         lookupDao.save(testEntity);
 
         assertEquals(true, lookupDao.exists("testId"));
         assertEquals(false, lookupDao.exists("testId1"));
         Optional<TestEntity> result = lookupDao.get("testId");
-        assertEquals("Some Text", result.get().getText());
+        assertEquals("Some Text",
+                     result.get()
+                             .getText());
 
         testEntity.setText("Some New Text");
         lookupDao.save(testEntity);
         result = lookupDao.get("testId");
-        assertEquals("Some New Text", result.get().getText());
+        assertEquals("Some New Text",
+                     result.get()
+                             .getText());
 
         boolean updateStatus = lookupDao.update("testId", entity -> {
-            if(entity.isPresent()) {
+            if (entity.isPresent()) {
                 TestEntity e = entity.get();
                 e.setText("Updated text");
                 return e;
@@ -234,10 +290,12 @@ public class CacheableLookupDaoTest {
 
         assertTrue(updateStatus);
         result = lookupDao.get("testId");
-        assertEquals("Updated text", result.get().getText());
+        assertEquals("Updated text",
+                     result.get()
+                             .getText());
 
         updateStatus = lookupDao.update("testIdxxx", entity -> {
-            if(entity.isPresent()) {
+            if (entity.isPresent()) {
                 TestEntity e = entity.get();
                 e.setText("Updated text");
                 return e;
@@ -251,7 +309,7 @@ public class CacheableLookupDaoTest {
     @Test
     public void testScatterGather() throws Exception {
         List<TestEntity> results = lookupDao.scatterGather(DetachedCriteria.forClass(TestEntity.class)
-                .add(Restrictions.eq("externalId", "testId")));
+                                                                   .add(Restrictions.eq("externalId", "testId")));
         assertTrue(results.isEmpty());
 
         TestEntity testEntity = TestEntity.builder()
@@ -260,9 +318,11 @@ public class CacheableLookupDaoTest {
                 .build();
         lookupDao.save(testEntity);
         results = lookupDao.scatterGather(DetachedCriteria.forClass(TestEntity.class)
-                .add(Restrictions.eq("externalId", "testId")));
+                                                  .add(Restrictions.eq("externalId", "testId")));
         assertFalse(results.isEmpty());
-        assertEquals("Some Text", results.get(0).getText());
+        assertEquals("Some Text",
+                     results.get(0)
+                             .getText());
     }
 
     @Test
@@ -270,22 +330,27 @@ public class CacheableLookupDaoTest {
         final String phoneNumber = "9830968020";
 
         Phone phone = Phone.builder()
-                            .phone(phoneNumber)
-                            .build();
+                .phone(phoneNumber)
+                .build();
 
-        Phone savedPhone = phoneDao.save(phone).get();
+        Phone savedPhone = phoneDao.save(phone)
+                .get();
 
         Transaction transaction = Transaction.builder()
-                                    .transactionId("testTxn")
-                                    .to("9830703153")
-                                    .amount(100)
-                                    .phone(savedPhone)
-                                    .build();
+                .transactionId("testTxn")
+                .to("9830703153")
+                .amount(100)
+                .phone(savedPhone)
+                .build();
 
-        transactionDao.save(savedPhone.getPhone(), transaction).get();
+        transactionDao.save(savedPhone.getPhone(), transaction)
+                .get();
         {
-            Transaction resultTx = transactionDao.get(phoneNumber, "testTxn").get();
-            assertEquals(phoneNumber, resultTx.getPhone().getPhone());
+            Transaction resultTx = transactionDao.get(phoneNumber, "testTxn")
+                    .get();
+            assertEquals(phoneNumber,
+                         resultTx.getPhone()
+                                 .getPhone());
             assertTrue(transactionDao.exists(phoneNumber, "testTxn"));
             assertFalse(transactionDao.exists(phoneNumber, "testTxn1"));
         }
@@ -298,21 +363,23 @@ public class CacheableLookupDaoTest {
         saveAudit(phoneNumber, "testTxn", "Completed");
 
         assertEquals(3, auditDao.count(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
+                .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
-        assertEquals("Started", audits.get(0).getText());
+                .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
+        assertEquals("Started",
+                     audits.get(0)
+                             .getText());
 
     }
 
     private void saveAudit(String phone, String transaction, String text) throws Exception {
         auditDao.save(phone, Audit.builder()
-                                                    .text(text)
-                                                    .transaction(Transaction.builder()
-                                                                    .transactionId(transaction)
-                                                                    .build())
-                                                    .build());
+                .text(text)
+                .transaction(Transaction.builder()
+                                     .transactionId(transaction)
+                                     .build())
+                .build());
     }
 
     @Test
@@ -340,9 +407,9 @@ public class CacheableLookupDaoTest {
                 .build();
 
         Audit started = Audit.builder()
-                            .text("Started")
-                            .transaction(transaction)
-                            .build();
+                .text("Started")
+                .transaction(transaction)
+                .build();
 
         Audit completed = Audit.builder()
                 .text("Completed")

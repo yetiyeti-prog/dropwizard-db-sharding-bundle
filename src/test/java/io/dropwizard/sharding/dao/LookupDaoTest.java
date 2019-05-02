@@ -23,6 +23,7 @@ import io.dropwizard.sharding.dao.testdata.entities.Audit;
 import io.dropwizard.sharding.dao.testdata.entities.Phone;
 import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
 import io.dropwizard.sharding.dao.testdata.entities.Transaction;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -53,9 +54,9 @@ public class LookupDaoTest {
     private SessionFactory buildSessionFactory(String dbName) {
         Configuration configuration = new Configuration();
         configuration.setProperty("hibernate.dialect",
-                "org.hibernate.dialect.H2Dialect");
+                                  "org.hibernate.dialect.H2Dialect");
         configuration.setProperty("hibernate.connection.driver_class",
-                "org.h2.Driver");
+                                  "org.h2.Driver");
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
@@ -68,7 +69,8 @@ public class LookupDaoTest {
 
         StandardServiceRegistry serviceRegistry
                 = new StandardServiceRegistryBuilder().applySettings(
-                            configuration.getProperties()).build();
+                configuration.getProperties())
+                .build();
         return configuration.buildSessionFactory(serviceRegistry);
     }
 
@@ -77,8 +79,10 @@ public class LookupDaoTest {
         for (int i = 0; i < 2; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
-        final ShardCalculator<String> shardCalculator = new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>());
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
+        final ShardCalculator<String> shardCalculator = new ShardCalculator<>(shardManager,
+                                                                              new ConsistentHashBucketIdExtractor<>(
+                                                                                      shardManager));
         lookupDao = new LookupDao<>(sessionFactories, TestEntity.class, shardCalculator);
         phoneDao = new LookupDao<>(sessionFactories, Phone.class, shardCalculator);
         transactionDao = new RelationalDao<>(sessionFactories, Transaction.class, shardCalculator);
@@ -93,23 +97,27 @@ public class LookupDaoTest {
     @Test
     public void testSave() throws Exception {
         TestEntity testEntity = TestEntity.builder()
-                                    .externalId("testId")
-                                    .text("Some Text")
-                                    .build();
+                .externalId("testId")
+                .text("Some Text")
+                .build();
         lookupDao.save(testEntity);
 
         assertEquals(true, lookupDao.exists("testId"));
         assertEquals(false, lookupDao.exists("testId1"));
         Optional<TestEntity> result = lookupDao.get("testId");
-        assertEquals("Some Text", result.get().getText());
+        assertEquals("Some Text",
+                     result.get()
+                             .getText());
 
         testEntity.setText("Some New Text");
         lookupDao.save(testEntity);
         result = lookupDao.get("testId");
-        assertEquals("Some New Text", result.get().getText());
+        assertEquals("Some New Text",
+                     result.get()
+                             .getText());
 
         boolean updateStatus = lookupDao.update("testId", entity -> {
-            if(entity.isPresent()) {
+            if (entity.isPresent()) {
                 TestEntity e = entity.get();
                 e.setText("Updated text");
                 return e;
@@ -119,10 +127,12 @@ public class LookupDaoTest {
 
         assertTrue(updateStatus);
         result = lookupDao.get("testId");
-        assertEquals("Updated text", result.get().getText());
+        assertEquals("Updated text",
+                     result.get()
+                             .getText());
 
         updateStatus = lookupDao.update("testIdxxx", entity -> {
-            if(entity.isPresent()) {
+            if (entity.isPresent()) {
                 TestEntity e = entity.get();
                 e.setText("Updated text");
                 return e;
@@ -136,7 +146,7 @@ public class LookupDaoTest {
     @Test
     public void testScatterGather() throws Exception {
         List<TestEntity> results = lookupDao.scatterGather(DetachedCriteria.forClass(TestEntity.class)
-                .add(Restrictions.eq("externalId", "testId")));
+                                                                   .add(Restrictions.eq("externalId", "testId")));
         assertTrue(results.isEmpty());
 
         TestEntity testEntity = TestEntity.builder()
@@ -145,9 +155,11 @@ public class LookupDaoTest {
                 .build();
         lookupDao.save(testEntity);
         results = lookupDao.scatterGather(DetachedCriteria.forClass(TestEntity.class)
-                .add(Restrictions.eq("externalId", "testId")));
+                                                  .add(Restrictions.eq("externalId", "testId")));
         assertFalse(results.isEmpty());
-        assertEquals("Some Text", results.get(0).getText());
+        assertEquals("Some Text",
+                     results.get(0)
+                             .getText());
     }
 
     @Test
@@ -164,8 +176,10 @@ public class LookupDaoTest {
         lookupDao.save(testEntity1);
         results = lookupDao.get(lookupKeys);
         assertFalse(results.isEmpty());
-        assertEquals(1,results.size());
-        assertEquals("Some Text 1", results.get(0).getText());
+        assertEquals(1, results.size());
+        assertEquals("Some Text 1",
+                     results.get(0)
+                             .getText());
 
         TestEntity testEntity2 = TestEntity.builder()
                 .externalId("testId2")
@@ -175,7 +189,7 @@ public class LookupDaoTest {
         lookupKeys.add("testId2");
         results = lookupDao.get(lookupKeys);
         assertFalse(results.isEmpty());
-        assertEquals(2,results.size());
+        assertEquals(2, results.size());
     }
 
 
@@ -184,22 +198,27 @@ public class LookupDaoTest {
         final String phoneNumber = "9830968020";
 
         Phone phone = Phone.builder()
-                            .phone(phoneNumber)
-                            .build();
+                .phone(phoneNumber)
+                .build();
 
-        Phone savedPhone = phoneDao.save(phone).get();
+        Phone savedPhone = phoneDao.save(phone)
+                .get();
 
         Transaction transaction = Transaction.builder()
-                                    .transactionId("testTxn")
-                                    .to("9830703153")
-                                    .amount(100)
-                                    .phone(savedPhone)
-                                    .build();
+                .transactionId("testTxn")
+                .to("9830703153")
+                .amount(100)
+                .phone(savedPhone)
+                .build();
 
-        transactionDao.save(savedPhone.getPhone(), transaction).get();
+        transactionDao.save(savedPhone.getPhone(), transaction)
+                .get();
         {
-            Transaction resultTx = transactionDao.get(phoneNumber, "testTxn").get();
-            assertEquals(phoneNumber, resultTx.getPhone().getPhone());
+            Transaction resultTx = transactionDao.get(phoneNumber, "testTxn")
+                    .get();
+            assertEquals(phoneNumber,
+                         resultTx.getPhone()
+                                 .getPhone());
             assertTrue(transactionDao.exists(phoneNumber, "testTxn"));
             assertFalse(transactionDao.exists(phoneNumber, "testTxn1"));
         }
@@ -212,21 +231,23 @@ public class LookupDaoTest {
         saveAudit(phoneNumber, "testTxn", "Completed");
 
         assertEquals(3, auditDao.count(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
+                .add(Restrictions.eq("transaction.transactionId", "testTxn"))));
 
         List<Audit> audits = auditDao.select(phoneNumber, DetachedCriteria.forClass(Audit.class)
-                                                        .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
-        assertEquals("Started", audits.get(0).getText());
+                .add(Restrictions.eq("transaction.transactionId", "testTxn")), 0, 10);
+        assertEquals("Started",
+                     audits.get(0)
+                             .getText());
 
     }
 
     private void saveAudit(String phone, String transaction, String text) throws Exception {
         auditDao.save(phone, Audit.builder()
-                                                    .text(text)
-                                                    .transaction(Transaction.builder()
-                                                                    .transactionId(transaction)
-                                                                    .build())
-                                                    .build());
+                .text(text)
+                .transaction(Transaction.builder()
+                                     .transactionId(transaction)
+                                     .build())
+                .build());
     }
 
     @Test
@@ -254,9 +275,9 @@ public class LookupDaoTest {
                 .build();
 
         Audit started = Audit.builder()
-                            .text("Started")
-                            .transaction(transaction)
-                            .build();
+                .text("Started")
+                .transaction(transaction)
+                .build();
 
         Audit completed = Audit.builder()
                 .text("Completed")
@@ -276,9 +297,9 @@ public class LookupDaoTest {
                 .build();
         lookupDao.save(testEntity);
         Assert.assertNotNull(lookupDao.get("testId")
-                .orElse(null));
+                                     .orElse(null));
         Assert.assertTrue(lookupDao.delete("testId"));
         Assert.assertNull(lookupDao.get("testId")
-                                     .orElse(null));
+                                  .orElse(null));
     }
 }

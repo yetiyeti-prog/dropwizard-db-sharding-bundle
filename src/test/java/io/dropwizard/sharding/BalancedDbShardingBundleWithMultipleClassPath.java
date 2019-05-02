@@ -1,7 +1,22 @@
-package io.dropwizard.sharding.bundle;
+/*
+ * Copyright 2019 Santanu Sinha <santanu.sinha@gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
-import com.google.common.collect.ImmutableList;
-import io.dropwizard.sharding.DBShardingBundle;
+package io.dropwizard.sharding;
+
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.LookupDao;
 import io.dropwizard.sharding.dao.testdata.entities.TestEntity;
@@ -11,15 +26,15 @@ import org.junit.Test;
 
 import java.util.Optional;
 
-public class DbShardingBundleWithMultipleClassPath extends DBShardingBundleBaseTest  {
+public class BalancedDbShardingBundleWithMultipleClassPath extends DBShardingBundleTestBase {
 
 
 
     @Override
-    protected DBShardingBundle<TestConfig> getBundle() {
-        return new DBShardingBundle<DBShardingBundleBaseTest.TestConfig>("io.dropwizard.sharding.dao.testdata.entities","io.dropwizard.sharding.dao.testdata.multi") {
+    protected DBShardingBundleBase<TestConfig> getBundle() {
+        return new BalancedDBShardingBundle<TestConfig>("io.dropwizard.sharding.dao.testdata.entities", "io.dropwizard.sharding.dao.testdata.multi") {
             @Override
-            protected ShardedHibernateFactory getConfig(DBShardingBundleBaseTest.TestConfig config) {
+            protected ShardedHibernateFactory getConfig(TestConfig config) {
                 return testConfig.getShards();
             }
         };
@@ -29,13 +44,13 @@ public class DbShardingBundleWithMultipleClassPath extends DBShardingBundleBaseT
     @Test
     public void testMultiPackage() throws Exception {
 
-        DBShardingBundle<TestConfig> bundle = getBundle();
+        DBShardingBundleBase<TestConfig> bundle = getBundle();
 
         bundle.initialize(bootstrap);
         bundle.initBundles(bootstrap);
         bundle.runBundles(testConfig, environment);
         bundle.run(testConfig, environment);
-        LookupDao<MultiPackageTestEntity> lookupDao = DBShardingBundle.createParentObjectDao(bundle,MultiPackageTestEntity.class);
+        LookupDao<MultiPackageTestEntity> lookupDao = DBShardingBundle.createParentObjectDao(bundle, MultiPackageTestEntity.class);
 
         MultiPackageTestEntity multiPackageTestEntity = MultiPackageTestEntity.builder()
                 .text("Testing multi package scanning")
@@ -48,7 +63,7 @@ public class DbShardingBundleWithMultipleClassPath extends DBShardingBundleBaseT
         Optional<MultiPackageTestEntity> fetchedMultiPackageTestEntity = lookupDao.get(multiPackageTestEntity.getLookup());
         Assert.assertEquals(saveMultiPackageTestEntity.get().getText(), fetchedMultiPackageTestEntity.get().getText());
 
-        LookupDao<TestEntity> testEntityLookupDao = DBShardingBundle.createParentObjectDao(bundle,TestEntity.class);
+        LookupDao<TestEntity> testEntityLookupDao = DBShardingBundle.createParentObjectDao(bundle, TestEntity.class);
 
         TestEntity testEntity = TestEntity.builder()
                 .externalId("E123")

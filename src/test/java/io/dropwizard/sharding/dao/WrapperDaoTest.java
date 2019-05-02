@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import io.dropwizard.sharding.dao.testdata.OrderDao;
 import io.dropwizard.sharding.dao.testdata.entities.Order;
 import io.dropwizard.sharding.dao.testdata.entities.OrderItem;
+import io.dropwizard.sharding.sharding.BalancedShardManager;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -65,9 +66,10 @@ public class WrapperDaoTest {
         for (int i = 0; i < 2; i++) {
             sessionFactories.add(buildSessionFactory(String.format("db_%d", i)));
         }
-        final ShardManager shardManager = new ShardManager(sessionFactories.size());
+        final ShardManager shardManager = new BalancedShardManager(sessionFactories.size());
         dao = new WrapperDao<>(sessionFactories, OrderDao.class,
-                               new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>()));
+                               new ShardCalculator<>(shardManager, new ConsistentHashBucketIdExtractor<>(shardManager)));
+
     }
 
     @After

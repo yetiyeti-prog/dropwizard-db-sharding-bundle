@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import mmh3
 import argparse
+import mmh3
 import numpy
 
 MIN_BUCKET = 0

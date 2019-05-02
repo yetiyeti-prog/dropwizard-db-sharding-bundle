@@ -27,11 +27,17 @@ import java.nio.charset.StandardCharsets;
  * Generates bucket id on the basis of murmur128 of the key.
  */
 public class ConsistentHashBucketIdExtractor<T> implements BucketIdExtractor<T> {
+    private final ShardManager shardManager;
+
+    public ConsistentHashBucketIdExtractor(ShardManager shardManager) {
+        this.shardManager = shardManager;
+    }
+
     @Override
     public int bucketId(T id) {
         int hashKey = Hashing.murmur3_128().hashString(id.toString(), StandardCharsets.UTF_8).asInt();
         hashKey *= hashKey < 0 ? -1 : 1;
 
-        return hashKey % (ShardManager.MAX_BUCKET + 1);
+        return hashKey % shardManager.numBuckets();
     }
 }

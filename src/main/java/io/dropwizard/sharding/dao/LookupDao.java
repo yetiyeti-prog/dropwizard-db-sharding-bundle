@@ -41,8 +41,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -423,6 +425,34 @@ public class LookupDao<T> {
             return apply(parent-> {
                 try {
                     relationalDao.update(this, id, handler);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> createOrUpdate(RelationalDao<U> relationalDao,
+                                                  DetachedCriteria criteria,
+                                                  Function<U, U> updater,
+                                                  Supplier<U> entityGenerator) {
+            return apply(parent-> {
+                try {
+                    relationalDao.createOrUpdate(this, criteria, updater, entityGenerator);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
+
+        public<U> LockedContext<T> update(RelationalDao<U> relationalDao,
+                                          DetachedCriteria criteria,
+                                          Function<U, U> updater,
+                                          BooleanSupplier updateNext) {
+            return apply(parent-> {
+                try {
+                    relationalDao.update(this, criteria, updater, updateNext);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

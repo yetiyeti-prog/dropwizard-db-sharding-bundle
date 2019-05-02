@@ -59,17 +59,6 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
         return Optional.ofNullable(savedEntity);
     }
 
-    public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
-        List<T> result = cache.select(parentKey);
-        if(result == null) {
-            result = super.select(parentKey, criteria, 0, 10);
-        }
-        if(result != null) {
-            cache.put(parentKey, result);
-        }
-        return result;
-    }
-
     public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
         List<T> result = cache.select(parentKey, first, numResults);
         if(result == null) {

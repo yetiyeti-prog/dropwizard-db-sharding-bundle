@@ -28,6 +28,8 @@ import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Order;
+import org.hibernate.criterion.Restrictions;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.Assert;
 import org.junit.Before;
@@ -103,7 +105,7 @@ public class LockTest {
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
         System.out.println(relationDao.get("0", 1L).get());
-        Assert.assertEquals(6, relationDao.select("0", DetachedCriteria.forClass(SomeOtherObject.class)).size());
+        Assert.assertEquals(6, relationDao.select("0", DetachedCriteria.forClass(SomeOtherObject.class), 0, 10).size());
         Assert.assertEquals("Hello",relationDao.get("0", 1L).get().getValue());
     }
 
@@ -129,8 +131,6 @@ public class LockTest {
                 .execute();
 
     }
-
-
 
     @Test
     public void testPersist() throws Exception {
@@ -256,4 +256,150 @@ public class LockTest {
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
     }
 
+    @Test
+    public void testCreateOrUpdate() throws Exception {
+        final String parentId = "1";
+        final SomeLookupObject parent = SomeLookupObject.builder()
+                .myId(parentId)
+                .name("Parent 1")
+                .build();
+        lookupDao.save(parent);
+
+        final SomeOtherObject child = relationDao.save(parent.getMyId(), SomeOtherObject.builder()
+                .my_id(parent.getMyId())
+                .value("Hello")
+                .build()).get();
+
+
+        //test existing entity update
+        final String childModifiedValue = "Hello Modified";
+        final String parentModifiedValue = "Changed";
+        final DetachedCriteria updateCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("my_id", parent.getMyId()));
+
+        lookupDao.lockAndGetExecutor(parent.getMyId())
+                .createOrUpdate(relationDao, updateCriteria, childObj -> {
+                    childObj.setValue(childModifiedValue);
+                    return childObj;
+                }, () -> {
+                    Assert.fail("New Entity is getting created. It should have been updated.");
+                    return SomeOtherObject.builder()
+                            .my_id(parentId)
+                            .value("test")
+                            .build();
+                })
+                .mutate(parentObj -> parentObj.setName(parentModifiedValue))
+                .execute();
+
+        Assert.assertEquals(childModifiedValue,relationDao.get(parent.getMyId(), child.getId()).get().getValue());
+        Assert.assertEquals(parentModifiedValue,lookupDao.get(parentId).get().getName());
+
+        //test non existing entity creation
+        final String newChildValue = "Newly created child";
+        final String newParentValue = "New parent Value";
+        final DetachedCriteria creationCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("value", newChildValue));
+
+        lookupDao.lockAndGetExecutor(parent.getMyId())
+                .createOrUpdate(relationDao, creationCriteria, childObj -> {
+                    Assert.assertNotEquals(null, childObj);
+                    Assert.fail("New Entity is getting updated. It should have been created.");
+
+                    childObj.setValue("abcd");
+                    return childObj;
+
+                }, () -> SomeOtherObject.builder()
+                            .my_id(parentId)
+                            .value(newChildValue)
+                            .build())
+                .mutate(parentObj -> parentObj.setName(newParentValue))
+                .execute();
+
+        final SomeOtherObject savedChild = relationDao.select(parent.getMyId(), creationCriteria, 0, 1).stream().findFirst().get();
+        Assert.assertEquals(newChildValue, savedChild.getValue());
+        Assert.assertNotEquals(child.getId(), savedChild.getId());
+        Assert.assertEquals(newParentValue,lookupDao.get(parentId).get().getName());
+    }
+
+    @Test
+    public void testUpdateWithScroll() throws Exception {
+        final String parent1Id = "0";
+        final SomeLookupObject parent1 = SomeLookupObject.builder()
+                .myId(parent1Id)
+                .name("Parent 1")
+                .build();
+
+        final SomeOtherObject child1 = relationDao.save(parent1.getMyId(), SomeOtherObject.builder()
+                .my_id(parent1.getMyId())
+                .value("Hello1")
+                .build()).get();
+
+        final SomeOtherObject child2 = relationDao.save(parent1.getMyId(), SomeOtherObject.builder()
+                .my_id(parent1.getMyId())
+                .value("Hello2")
+                .build()).get();
+
+        final String parent2Id = "1";
+        final SomeLookupObject parent2 = SomeLookupObject.builder()
+                .myId(parent2Id)
+                .name("Parent 2")
+                .build();
+
+        final SomeOtherObject child3 = relationDao.save(parent2.getMyId(), SomeOtherObject.builder()
+                .my_id(parent2.getMyId())
+                .value("Hello3")
+                .build()).get();
+
+        lookupDao.save(parent1);
+        lookupDao.save(parent2);
+
+        //test full update
+        final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("my_id", parent1.getMyId()))
+                .addOrder(Order.asc("id"));
+
+        final String childModifiedValue = "Hello Modified";
+        final String parentModifiedValue = "Parent Changed";
+
+        lookupDao.lockAndGetExecutor(parent1.getMyId())
+                .update(relationDao,allSelectCriteria, entityObj -> {
+                    entityObj.setValue(childModifiedValue);
+                    return entityObj;
+                }, () -> true)
+                .mutate(parent -> parent.setName(parentModifiedValue))
+                .execute();
+
+        Assert.assertEquals(childModifiedValue,relationDao.get(parent1.getMyId(), child1.getId()).get().getValue());
+        Assert.assertEquals(childModifiedValue,relationDao.get(parent1.getMyId(), child2.getId()).get().getValue());
+        Assert.assertEquals(parentModifiedValue,lookupDao.get(parent1Id).get().getName());
+
+        Assert.assertEquals("Hello3",relationDao.get(parent2.getMyId(), child3.getId()).get().getValue());
+        Assert.assertEquals("Parent 2",lookupDao.get(parent2Id).get().getName());
+
+        final boolean[] shouldUpdateNext = new boolean[1];
+        shouldUpdateNext[0] = true;
+
+        //test partial update
+        final String childModifiedValue2 = "Hello Modified Partial";
+        final String parentModifiedValue2 = "Parent Changed Partial";
+        lookupDao.lockAndGetExecutor(parent1.getMyId())
+                .update(relationDao,allSelectCriteria, entityObj -> {
+                    entityObj.setValue(childModifiedValue2);
+
+                    if (entityObj.getId() == child1.getId()) {
+                        shouldUpdateNext[0] = false;
+                    }
+
+                    return entityObj;
+                }, () -> shouldUpdateNext[0])
+                .mutate(parent -> parent.setName(parentModifiedValue2))
+                .execute();
+
+        Assert.assertEquals(childModifiedValue2,relationDao.get(parent1Id, child1.getId()).get().getValue());
+        Assert.assertEquals(childModifiedValue,relationDao.get(parent1Id, child2.getId()).get().getValue());
+        Assert.assertEquals(parentModifiedValue2,lookupDao.get(parent1Id).get().getName());
+
+        Assert.assertEquals("Hello3",relationDao.get(parent2.getMyId(), child3.getId()).get().getValue());
+        Assert.assertEquals("Parent 2",lookupDao.get(parent2Id).get().getName());
+    }
 }

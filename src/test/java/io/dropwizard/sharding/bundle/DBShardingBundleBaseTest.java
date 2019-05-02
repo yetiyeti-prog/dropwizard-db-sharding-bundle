@@ -62,12 +62,12 @@ public abstract class DBShardingBundleBaseTest {
     }
 
     final TestConfig testConfig = new TestConfig();
-    private final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
-    private final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
-    private final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
-    private final Environment environment = mock(Environment.class);
-    private final AdminEnvironment adminEnvironment= mock(AdminEnvironment.class);
-    private final Bootstrap<?> bootstrap = mock(Bootstrap.class);
+    protected final HealthCheckRegistry healthChecks = mock(HealthCheckRegistry.class);
+    protected final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
+    protected final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
+    protected final Environment environment = mock(Environment.class);
+    protected final AdminEnvironment adminEnvironment= mock(AdminEnvironment.class);
+    protected final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
     protected abstract DBShardingBundle<TestConfig> getBundle();
@@ -109,6 +109,7 @@ public abstract class DBShardingBundleBaseTest {
         RelationalDao<Order> rDao = DBShardingBundle.createRelatedObjectDao(bundle, Order.class);
 
         RelationalDao<OrderItem> orderItemDao = DBShardingBundle.createRelatedObjectDao(bundle, OrderItem.class);
+
 
         final String customer = "customer1";
 
@@ -176,7 +177,7 @@ public abstract class DBShardingBundleBaseTest {
         List<OrderItem> orderItems = orderItemDao.select("customer1",
                                                         DetachedCriteria.forClass(OrderItem.class)
                                                             .createAlias("order", "o")
-                                                            .add(Restrictions.eq("o.orderId", "OD00001")));
+                                                            .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         orderItemDao.update("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
@@ -191,7 +192,7 @@ public abstract class DBShardingBundleBaseTest {
         orderItems = orderItemDao.select("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
                         .createAlias("order", "o")
-                        .add(Restrictions.eq("o.orderId", "OD00001")));
+                        .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         assertEquals("Item AA", orderItems.get(0).getName());
     }

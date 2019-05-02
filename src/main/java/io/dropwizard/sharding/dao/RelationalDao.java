@@ -26,8 +26,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.commons.lang3.reflect.FieldUtils;
-import org.hibernate.Session;
-import org.hibernate.SessionFactory;
+import org.hibernate.*;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
@@ -37,7 +36,9 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -91,6 +92,11 @@ public class RelationalDao<T> implements ShardedDao<T> {
             return list(criteria);
         }
 
+        ScrollableResults scroll(ScrollParamPriv scrollDetails) {
+            final Criteria criteria = scrollDetails.getCriteria().getExecutableCriteria(currentSession());
+            return criteria.scroll(ScrollMode.FORWARD_ONLY);
+        }
+
         long count(DetachedCriteria criteria) {
             return  (long)criteria.getExecutableCriteria(currentSession())
                             .setProjection(Projections.rowCount())
@@ -104,6 +110,12 @@ public class RelationalDao<T> implements ShardedDao<T> {
         DetachedCriteria criteria;
         int start;
         int numRows;
+    }
+
+    @Builder
+    private static class ScrollParamPriv {
+        @Getter
+        private DetachedCriteria criteria;
     }
 
     private List<RelationalDaoPriv> daos;
@@ -181,6 +193,43 @@ public class RelationalDao<T> implements ShardedDao<T> {
         return update(context.getSessionFactory(), dao, id, updater, false);
     }
 
+    <U> boolean update(LookupDao.LockedContext<U> context,
+                       DetachedCriteria criteria,
+                       Function<T, T> updater,
+                       BooleanSupplier updateNext) {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+
+        try {
+            final ScrollParamPriv scrollParam = ScrollParamPriv.builder()
+                    .criteria(criteria)
+                    .build();
+
+            return Transactions.<ScrollableResults, ScrollParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::scroll, scrollParam, scrollableResults -> {
+                boolean updateNextObject = true;
+                try {
+                    while(scrollableResults.next() && updateNextObject) {
+                        final T entity = (T) scrollableResults.get(0);
+                        if (null == entity) {
+                            return false;
+                        }
+                        final T newEntity = updater.apply(entity);
+                        if(null == newEntity) {
+                            return false;
+                        }
+                        dao.update(entity, newEntity);
+                        updateNextObject = updateNext.getAsBoolean();
+                    }
+                }
+                finally {
+                    scrollableResults.close();
+                }
+                return true;
+            }, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with scroll: " + criteria, e);
+        }
+    }
+
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
@@ -240,6 +289,44 @@ public class RelationalDao<T> implements ShardedDao<T> {
         }
     }
 
+    <U> boolean createOrUpdate(LookupDao.LockedContext<U> context,
+                               DetachedCriteria criteria,
+                               Function<T, T> updater,
+                               Supplier<T> entityGenerator) {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+
+        try {
+            final SelectParamPriv selectParam = SelectParamPriv.builder()
+                    .criteria(criteria)
+                    .start(0)
+                    .numRows(1)
+                    .build();
+
+            return Transactions.<List<T>, SelectParamPriv, Boolean>execute(context.getSessionFactory(), true, dao::select, selectParam, (List<T> entityList) -> {
+                if(entityList == null || entityList.isEmpty()) {
+                    Preconditions.checkNotNull(entityGenerator, "Entity generator can't be null");
+                    final T newEntity = entityGenerator.get();
+                    Preconditions.checkNotNull(newEntity, "Generated entity can't be null");
+                    dao.save(newEntity);
+                    return true;
+                }
+
+                final T oldEntity = entityList.get(0);
+                if(null == oldEntity) {
+                    return false;
+                }
+                final T newEntity = updater.apply(oldEntity);
+                if(null == newEntity) {
+                    return false;
+                }
+                dao.update(oldEntity, newEntity);
+                return true;
+            }, false);
+        } catch (Exception e) {
+            throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
+        }
+    }
+
     public boolean updateAll(String parentKey, int start, int numRows, DetachedCriteria criteria, Function<T, T> updater) {
         int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
@@ -250,10 +337,10 @@ public class RelationalDao<T> implements ShardedDao<T> {
                     .numRows(numRows)
                     .build();
             return Transactions.<List<T>, SelectParamPriv, Boolean>execute(dao.sessionFactory, true, dao::select, selectParam, entityList -> {
-                if(entityList == null || entityList.isEmpty()) {
+                if (entityList == null || entityList.isEmpty()) {
                     return false;
                 }
-                for(T oldEntity: entityList) {
+                for (T oldEntity : entityList) {
                     if (null == oldEntity) {
                         return false;
                     }
@@ -270,17 +357,8 @@ public class RelationalDao<T> implements ShardedDao<T> {
         }
     }
 
-
-    public List<T> select(String parentKey, DetachedCriteria criteria) throws Exception {
-        return select(parentKey, criteria, 0, 10);
-    }
-
     public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
         return select(parentKey, criteria, first, numResults, t-> t);
-    }
-
-    public<U> U select(String parentKey, DetachedCriteria criteria, Function<List<T>, U> handler) throws Exception {
-        return select(parentKey, criteria, 0, 10, handler);
     }
 
     public<U> U select(String parentKey, DetachedCriteria criteria, int first, int numResults, Function<List<T>, U> handler) throws Exception {
@@ -305,10 +383,6 @@ public class RelationalDao<T> implements ShardedDao<T> {
         RelationalDaoPriv dao = daos.get(shardId);
         Optional<T> result = Transactions.<T, Object>executeAndResolve(dao.sessionFactory, true, dao::get, key);
         return result.isPresent();
-    }
-
-    public List<T> scatterGather(DetachedCriteria criteria) {
-        return scatterGather(criteria, 0, 10);
     }
 
     public List<T> scatterGather(DetachedCriteria criteria, int start, int numRows) {

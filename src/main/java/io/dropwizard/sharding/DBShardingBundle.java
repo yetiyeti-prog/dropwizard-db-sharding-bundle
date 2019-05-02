@@ -47,6 +47,7 @@ import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
 
 import javax.persistence.Entity;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -75,11 +76,10 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
         init(inEntities);
     }
 
-    public DBShardingBundle(String dbNamespace, String classPathPrefix) {
+    public DBShardingBundle(String dbNamespace, List<String> classPathPrefixList) {
         this.dbNamespace = dbNamespace;
-
-        Set<Class<?>> entities = new Reflections(classPathPrefix).getTypesAnnotatedWith(Entity.class);
-        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", classPathPrefix));
+        Set<Class<?>> entities = new Reflections(classPathPrefixList).getTypesAnnotatedWith(Entity.class);
+        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", String.join(",",classPathPrefixList)));
         val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
         init(inEntities);
     }
@@ -88,8 +88,8 @@ public abstract class DBShardingBundle<T extends Configuration> implements Confi
         this(DEFAULT_NAMESPACE, entity, entities);
     }
 
-    public DBShardingBundle(String classPathPrefix) {
-        this(DEFAULT_NAMESPACE, classPathPrefix);
+    public DBShardingBundle(String... classPathPrefixes) {
+        this(DEFAULT_NAMESPACE, Arrays.asList(classPathPrefixes));
     }
 
     private void init(final ImmutableList<Class<?>> inEntities) {

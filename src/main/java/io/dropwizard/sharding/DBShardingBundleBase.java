@@ -36,6 +36,7 @@ import io.dropwizard.sharding.caching.RelationalCache;
 import io.dropwizard.sharding.config.ShardedHibernateFactory;
 import io.dropwizard.sharding.dao.*;
 import io.dropwizard.sharding.sharding.BucketIdExtractor;
+import io.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.dropwizard.sharding.utils.ShardCalculator;
@@ -82,7 +83,7 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
     protected DBShardingBundleBase(String dbNamespace, List<String> classPathPrefixList) {
         this.dbNamespace = dbNamespace;
         Set<Class<?>> entities = new Reflections(classPathPrefixList).getTypesAnnotatedWith(Entity.class);
-        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", String.join(",",classPathPrefixList)));
+        Preconditions.checkArgument(!entities.isEmpty(), String.format("No entity class found at %s", String.join(",", classPathPrefixList)));
         val inEntities = ImmutableList.<Class<?>>builder().addAll(entities).build();
         init(inEntities);
     }
@@ -97,12 +98,17 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
 
     protected abstract ShardManager createShardManager(int numShards);
 
+    protected abstract ShardManager createShardManager(int numShards, ShardBlacklistingStore blacklistingStore);
+
     private void init(final ImmutableList<Class<?>> inEntities) {
         String numShardsEnv = System.getProperty(String.join(".", dbNamespace, DEFAULT_NAMESPACE),
-                                                 System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
+                System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
 
         int numShards = Integer.parseInt(numShardsEnv);
-        shardManager = createShardManager(numShards);
+        val blacklistingStore = getBlacklistingStore();
+        shardManager = blacklistingStore != null
+                ? createShardManager(numShards, getBlacklistingStore())
+                : createShardManager(numShards);
         for (int i = 0; i < numShards; i++) {
             final int finalI = i;
             shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
@@ -150,6 +156,10 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
     }
 
     protected abstract ShardedHibernateFactory getConfig(T config);
+
+    protected ShardBlacklistingStore getBlacklistingStore() {
+        return null;
+    }
 
     public static <EntityType, T extends Configuration>
     LookupDao<EntityType> createParentObjectDao(DBShardingBundleBase<T> bundle, Class<EntityType> clazz) {
@@ -215,7 +225,7 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
     WrapperDao<EntityType, DaoType> createWrapperDao(DBShardingBundleBase<T> bundle, Class<DaoType> daoTypeClass,
                                                      Class[] extraConstructorParamClasses, Class[] extraConstructorParamObjects) {
         return new WrapperDao<>(bundle.sessionFactories, daoTypeClass,
-                                extraConstructorParamClasses, extraConstructorParamObjects,
-                                new ShardCalculator<>(bundle.shardManager, new ConsistentHashBucketIdExtractor<>(bundle.shardManager)));
+                extraConstructorParamClasses, extraConstructorParamObjects,
+                new ShardCalculator<>(bundle.shardManager, new ConsistentHashBucketIdExtractor<>(bundle.shardManager)));
     }
 }

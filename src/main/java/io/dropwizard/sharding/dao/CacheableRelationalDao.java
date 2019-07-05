@@ -39,6 +39,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
         this.cache = cache;
     }
 
+    @Override
     public Optional<T> get(String parentKey, Object key) {
         if(cache.exists(parentKey, key)) {
             return Optional.ofNullable(cache.get(parentKey, key));
@@ -50,6 +51,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
         return Optional.ofNullable(entity);
     }
 
+    @Override
     public Optional<T> save(String parentKey, T entity) throws Exception {
         T savedEntity = super.save(parentKey, entity, t -> t);
         if(savedEntity != null) {
@@ -59,6 +61,7 @@ public class CacheableRelationalDao<T> extends RelationalDao<T> {
         return Optional.ofNullable(savedEntity);
     }
 
+    @Override
     public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception {
         List<T> result = cache.select(parentKey, first, numResults);
         if(result == null) {

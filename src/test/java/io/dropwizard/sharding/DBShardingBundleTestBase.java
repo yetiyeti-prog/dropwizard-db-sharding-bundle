@@ -65,7 +65,7 @@ public abstract class DBShardingBundleTestBase {
     protected final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     protected final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
     protected final Environment environment = mock(Environment.class);
-    protected final AdminEnvironment adminEnvironment= mock(AdminEnvironment.class);
+    protected final AdminEnvironment adminEnvironment = mock(AdminEnvironment.class);
     protected final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
@@ -93,6 +93,7 @@ public abstract class DBShardingBundleTestBase {
         when(environment.lifecycle()).thenReturn(lifecycleEnvironment);
         when(environment.healthChecks()).thenReturn(healthChecks);
         when(environment.admin()).thenReturn(adminEnvironment);
+        when(bootstrap.getHealthCheckRegistry()).thenReturn(mock(HealthCheckRegistry.class));
     }
 
     @Test
@@ -163,7 +164,7 @@ public abstract class DBShardingBundleTestBase {
         Map<String, Object> blah = Maps.newHashMap();
 
         rDao.get("customer1", generatedId, foundOrder -> {
-            if(null == foundOrder) {
+            if (null == foundOrder) {
                 return Collections.emptyList();
             }
             List<OrderItem> itemList = foundOrder.getItems();
@@ -174,9 +175,9 @@ public abstract class DBShardingBundleTestBase {
         assertEquals(2, blah.get("count"));
 
         List<OrderItem> orderItems = orderItemDao.select("customer1",
-                                                        DetachedCriteria.forClass(OrderItem.class)
-                                                            .createAlias("order", "o")
-                                                            .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
+                DetachedCriteria.forClass(OrderItem.class)
+                        .createAlias("order", "o")
+                        .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         orderItemDao.update("customer1",
                 DetachedCriteria.forClass(OrderItem.class)
@@ -194,6 +195,21 @@ public abstract class DBShardingBundleTestBase {
                         .add(Restrictions.eq("o.orderId", "OD00001")), 0, 10);
         assertEquals(2, orderItems.size());
         assertEquals("Item AA", orderItems.get(0).getName());
+    }
+
+    @Test
+    public void testBundleWithShardBlacklisted() throws Exception {
+        DBShardingBundleBase<TestConfig> bundle = getBundle();
+        bundle.initialize(bootstrap);
+        bundle.initBundles(bootstrap);
+        bundle.runBundles(testConfig, environment);
+        bundle.run(testConfig, environment);
+        bundle.getShardManager().blacklistShard(1);
+
+        assertTrue(bundle.healthStatus()
+                .values()
+                .stream()
+                .allMatch(status -> status));
     }
 
 }

@@ -11,7 +11,7 @@ Apache Licensed
 The project dependencies are:
 ```
 <dependency>
-    <groupId>io.dropwizard.sharding</groupId>
+    <groupId>io.appform.dropwizard.sharding</groupId>
     <artifactId>db-sharding-bundle</artifactId>
     <version>1.3.12-3</version>
 </dependency>

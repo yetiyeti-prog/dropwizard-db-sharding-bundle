@@ -87,7 +87,7 @@ public abstract class ShardManager {
     }
 
     public void unblacklistShard(int shardId) {
-        if (shardId >= 0 && shardId < numShards()) {
+        if(shardId >=0 && shardId < numShards()) {
             shardBlacklistingStore.unblacklist(shardId);
             blackListedShards.refresh(shardId);
         }

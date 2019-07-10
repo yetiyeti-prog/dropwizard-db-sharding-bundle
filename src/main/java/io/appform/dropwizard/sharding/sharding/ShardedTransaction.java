@@ -1,6 +1,5 @@
 package io.appform.dropwizard.sharding.sharding;
 
-import io.appform.dropwizard.sharding.dao.WrapperDao;
 import io.dropwizard.hibernate.HibernateBundle;
 
 import java.lang.annotation.Retention;

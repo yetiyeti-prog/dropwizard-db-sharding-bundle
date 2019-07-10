@@ -17,7 +17,6 @@
 package io.appform.dropwizard.sharding.caching;
 
 
-import io.appform.dropwizard.sharding.dao.CacheableRelationalDao;
 import org.hibernate.criterion.DetachedCriteria;
 
 import java.util.List;
@@ -29,7 +28,7 @@ import java.util.List;
 public interface RelationalCache<V> {
 
     /**
-     * Write through method that will be called if cache enabled {@link CacheableRelationalDao#save(String, Object)} is used
+     * Write through method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#save(String, Object)} is used
      * @param parentKey The key of the parent that the entity is related to
      * @param key The key that needs to be used to write this element to cache
      * @param entity Entity that needs to be written into cache
@@ -37,21 +36,21 @@ public interface RelationalCache<V> {
     void put(String parentKey, Object key, V entity);
 
     /**
-     * Write through method that will be called if cache enabled {@link CacheableRelationalDao#select(String, DetachedCriteria)} is used
+     * Write through method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#select(String, DetachedCriteria)} is used
      * @param parentKey The key of the parent that the entity is related to
      * @param entities List of entities that needs to be written into cache
      */
     void put(String parentKey, List<V> entities);
 
     /**
-     * Write through method that will be called if cache enabled {@link CacheableRelationalDao#select(String, DetachedCriteria)} is used
+     * Write through method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#select(String, DetachedCriteria)} is used
      * @param parentKey The key of the parent that the entity is related to
      * @param entities List of entities that needs to be written into cache
      */
     void put(String parentKey, int first, int numResults, List<V> entities);
 
     /**
-     * Read through exists method that will be called if cache enabled {@link CacheableRelationalDao#exists(String, Object)} is used
+     * Read through exists method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#exists(String, Object)} is used
      * @param parentKey The key of the parent that the entity is related to
      * @param key The key that needs to be used to write this element to cache
      * @return Whether the entity exists or not.
@@ -59,7 +58,7 @@ public interface RelationalCache<V> {
     boolean exists(String parentKey, Object key);
 
     /**
-     * Read through method that will be called if a cache enabled {@link CacheableRelationalDao#get(String, Object)} is used
+     * Read through method that will be called if a cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#get(String, Object)} is used
      * @param parentKey The key of the parent the entity is related to
      * @param key The key of the entity that needs to be read
      * @return entity Entity that was read through the cache
@@ -67,14 +66,14 @@ public interface RelationalCache<V> {
     V get(String parentKey, Object key);
 
     /**
-     * Read through method that will be called if a cache enabled {@link CacheableRelationalDao#select(String, DetachedCriteria)} is used
+     * Read through method that will be called if a cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#select(String, DetachedCriteria)} is used
      * @param parentKey The key of the parent the entity is related to
      * @return Entities that was read through the cache
      */
     List<V> select(String parentKey);
 
     /**
-     * Read through method that will be called if a cache enabled {@link CacheableRelationalDao#select(String, DetachedCriteria)} is used
+     * Read through method that will be called if a cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableRelationalDao#select(String, DetachedCriteria)} is used
      * @param parentKey The key of the parent the entity is related to
      * @return Entities that was read through the cache
      */

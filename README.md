@@ -8,22 +8,13 @@ Apache Licensed
 
 ## Usage
 
-This library is available in clojars. Please use the following repository setting:
-
-```
-<repository>
-    <id>clojars</id>
-    <name>Clojars repository</name>
-    <url>https://clojars.org/repo</url>
-</repository>
-```
-
 The project dependencies are:
 ```
 <dependency>
-    <groupId>io.dropwizard.sharding</groupId>
+    <groupId>io.appform.dropwizard.sharding</groupId>
     <artifactId>db-sharding-bundle</artifactId>
-    <version>1.2.2-3</version>
+    <version>1.3.12-3</version>
 </dependency>
 ```
-
+# NOTE
+Package and group id has changed from `io.dropwizard.sharding` to `io.appfrom.dropwizard.sharding` from 1.3.12-3.

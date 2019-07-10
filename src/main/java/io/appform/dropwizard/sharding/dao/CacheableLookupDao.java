@@ -17,8 +17,8 @@
 
 package io.appform.dropwizard.sharding.dao;
 
-import io.appform.dropwizard.sharding.sharding.LookupKey;
 import io.appform.dropwizard.sharding.caching.LookupCache;
+import io.appform.dropwizard.sharding.exceptions.DaoFwdException;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.SessionFactory;
@@ -56,6 +56,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @return The entity
      * @throws Exception
      */
+    @Override
     public Optional<T> get(String key) throws Exception {
         if(cache.exists(key)) {
             return Optional.ofNullable(cache.get(key));
@@ -75,6 +76,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @return Entity
      * @throws Exception
      */
+    @Override
     public Optional<T> save(T entity) throws Exception {
         T savedEntity = super.save(entity, t -> t);
         if(savedEntity != null) {
@@ -91,6 +93,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @return True/False
      * @throws Exception
      */
+    @Override
     public boolean update(String id, Function<Optional<T>, T> updater) {
         boolean result = super.update(id, updater);
         if(result) {
@@ -98,7 +101,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
                 Optional<T> updatedEntity = super.get(id);
                 updatedEntity.ifPresent(t -> cache.put(id, t));
             } catch (Exception e) {
-                throw new RuntimeException("Error updating entity: " + id, e);
+                throw new DaoFwdException("Error updating entity: " + id, e);
             }
         }
         return result;
@@ -111,6 +114,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * @return Whether the entity exists or not
      * @throws Exception
      */
+    @Override
     public boolean exists(String key) throws Exception {
         if(cache.exists(key)) {
             return true;

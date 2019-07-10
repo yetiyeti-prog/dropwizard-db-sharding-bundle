@@ -32,7 +32,7 @@ public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundl
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {
-        return new DBShardingBundle<TestConfig>("io.dropwizard.sharding.dao.testdata.entities", "io.dropwizard.sharding.dao.testdata.multi") {
+        return new DBShardingBundle<TestConfig>("io.appform.dropwizard.sharding.dao.testdata.entities", "io.appform.dropwizard.sharding.dao.testdata.multi") {
             @Override
             protected ShardedHibernateFactory getConfig(DBShardingBundleTestBase.TestConfig config) {
                 return testConfig.getShards();

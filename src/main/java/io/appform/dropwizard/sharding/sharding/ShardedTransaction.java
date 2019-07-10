@@ -11,7 +11,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * Used to mark a transactional operation in a derviced {@link io.dropwizard.hibernate.AbstractDAO}
- * for use by {@link WrapperDao}
+ * for use by {@link io.appform.dropwizard.sharding.dao.WrapperDao}
  */
 @Target(METHOD)
 @Retention(RUNTIME)

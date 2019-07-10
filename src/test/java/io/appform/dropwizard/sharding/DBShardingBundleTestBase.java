@@ -20,6 +20,8 @@ package io.appform.dropwizard.sharding;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import io.appform.dropwizard.sharding.DBShardingBundle;
+import io.appform.dropwizard.sharding.DBShardingBundleBase;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jersey.DropwizardResourceConfig;

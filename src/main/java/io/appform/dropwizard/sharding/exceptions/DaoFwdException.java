@@ -15,22 +15,13 @@
  *
  */
 
-package io.appform.dropwizard.sharding;
-
-import io.appform.dropwizard.sharding.config.ShardedHibernateFactory;
+package io.appform.dropwizard.sharding.exceptions;
 
 /**
- * Created by tushar.mandar on 4/25/17.
+ *
  */
-public class LegacyDBShardingBundleWithAnnotationTest extends DBShardingBundleTestBase {
-
-    @Override
-    protected DBShardingBundleBase<TestConfig> getBundle() {
-        return new DBShardingBundle<TestConfig>("io.appform.dropwizard.sharding.dao.testdata.entities") {
-            @Override
-            protected ShardedHibernateFactory getConfig(DBShardingBundleTestBase.TestConfig config) {
-                return testConfig.getShards();
-            }
-        };
+public class DaoFwdException extends RuntimeException {
+    public DaoFwdException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

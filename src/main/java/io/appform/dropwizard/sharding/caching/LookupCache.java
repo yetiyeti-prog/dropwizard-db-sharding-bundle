@@ -26,21 +26,21 @@ import io.appform.dropwizard.sharding.dao.CacheableLookupDao;
 public interface LookupCache<V> {
 
     /**
-     * Write through method that will be called if cache enabled {@link CacheableLookupDao#save(Object)} is used
+     * Write through method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableLookupDao#save(Object)} is used
      * @param key The key that needs to be used to write this element to cache
      * @param entity Entity that needs to be written into cache
      */
     void put(String key, V entity);
 
     /**
-     * Read through exists method that will be called if cache enabled {@link CacheableLookupDao#exists(String)} is used
+     * Read through exists method that will be called if cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableLookupDao#exists(String)} is used
      * @param key The key of the entity that needs to be checked
      * @return whether the entity exists or not.
      */
     boolean exists(String key);
 
     /**
-     * Read through method that will be called if a cache enabled {@link CacheableLookupDao#get(String)} is used
+     * Read through method that will be called if a cache enabled {@link io.appform.dropwizard.sharding.dao.CacheableLookupDao#get(String)} is used
      * @param key The key of the entity that needs to be read
      * @return entity Entity that was read through the cache
      */

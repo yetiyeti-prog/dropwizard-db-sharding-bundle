@@ -32,7 +32,7 @@ public class BalancedDbShardingBundleWithMultipleClassPath extends DBShardingBun
 
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {
-        return new BalancedDBShardingBundle<TestConfig>("io.dropwizard.sharding.dao.testdata.entities", "io.dropwizard.sharding.dao.testdata.multi") {
+        return new BalancedDBShardingBundle<TestConfig>("io.appform.dropwizard.sharding.dao.testdata.entities", "io.appform.dropwizard.sharding.dao.testdata.multi") {
             @Override
             protected ShardedHibernateFactory getConfig(TestConfig config) {
                 return testConfig.getShards();

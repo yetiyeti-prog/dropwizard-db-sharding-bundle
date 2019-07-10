@@ -89,7 +89,7 @@ public class TransactionHandler {
     private void configureSession() {
         session.setDefaultReadOnly(readOnly);
         session.setCacheMode(CacheMode.NORMAL);
-        session.setFlushMode(FlushMode.AUTO);
+        session.setHibernateFlushMode(FlushMode.AUTO);
     }
 
     private void beginTransaction() {

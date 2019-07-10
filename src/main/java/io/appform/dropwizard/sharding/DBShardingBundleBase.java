@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Santanu Sinha <santanu.sinha@gmail.com>
+ * Copyright 2019 Santanu Sinha <santanu.sinha@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.appform.dropwizard.sharding.dao.*;
+import io.appform.dropwizard.sharding.healthcheck.HealthCheckManager;
+import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
 import io.dropwizard.db.PooledDataSourceFactory;
@@ -35,10 +37,7 @@ import io.appform.dropwizard.sharding.admin.UnblacklistShardTask;
 import io.appform.dropwizard.sharding.caching.LookupCache;
 import io.appform.dropwizard.sharding.caching.RelationalCache;
 import io.appform.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.dropwizard.sharding.dao.*;
-import io.appform.dropwizard.sharding.healthcheck.HealthCheckManager;
 import io.appform.dropwizard.sharding.sharding.BucketIdExtractor;
-import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.appform.dropwizard.sharding.sharding.impl.ConsistentHashBucketIdExtractor;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;

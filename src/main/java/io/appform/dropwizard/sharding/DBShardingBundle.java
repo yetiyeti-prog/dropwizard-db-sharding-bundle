@@ -17,9 +17,10 @@
 
 package io.appform.dropwizard.sharding;
 
-import io.dropwizard.Configuration;
 import io.appform.dropwizard.sharding.sharding.LegacyShardManager;
+import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
+import io.dropwizard.Configuration;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -50,8 +51,8 @@ public abstract class DBShardingBundle<T extends Configuration> extends DBShardi
     }
 
     @Override
-    protected ShardManager createShardManager(int numShards) {
-        return new LegacyShardManager(numShards);
+    protected ShardManager createShardManager(int numShards, ShardBlacklistingStore blacklistingStore) {
+        return new LegacyShardManager(numShards, blacklistingStore);
     }
 
 }

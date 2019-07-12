@@ -17,6 +17,8 @@
 package io.appform.dropwizard.sharding.caching;
 
 
+import io.appform.dropwizard.sharding.dao.CacheableLookupDao;
+
 /**
  * A simple cache interface which allows plugging in any caching framework or infrastructure to enable
  * write through caching

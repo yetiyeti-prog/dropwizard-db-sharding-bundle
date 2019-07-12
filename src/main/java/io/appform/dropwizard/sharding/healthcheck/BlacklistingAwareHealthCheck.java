@@ -12,9 +12,9 @@ public class BlacklistingAwareHealthCheck extends HealthCheck {
     private final HealthCheck baseHealthCheck;
     private final ShardManager shardManager;
 
-    public BlacklistingAwareHealthCheck(int shardId, HealthCheck healthCheck, ShardManager shardManager) {
+    public BlacklistingAwareHealthCheck(int shardId, HealthCheck baseHealthCheck, ShardManager shardManager) {
         this.shardId = shardId;
-        this.baseHealthCheck = healthCheck;
+        this.baseHealthCheck = baseHealthCheck;
         this.shardManager = shardManager;
     }
 

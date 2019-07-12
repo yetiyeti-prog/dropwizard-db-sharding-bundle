@@ -17,10 +17,10 @@
 
 package io.appform.dropwizard.sharding;
 
-import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
-import io.dropwizard.Configuration;
 import io.appform.dropwizard.sharding.sharding.BalancedShardManager;
+import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
+import io.dropwizard.Configuration;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -48,11 +48,6 @@ public abstract class BalancedDBShardingBundle<T extends Configuration> extends 
 
     public BalancedDBShardingBundle(String... classPathPrefixes) {
         super(classPathPrefixes);
-    }
-
-    @Override
-    protected ShardManager createShardManager(int numShards) {
-        return new BalancedShardManager(numShards);
     }
 
     @Override

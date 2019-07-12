@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.appform.dropwizard.sharding.dao.*;
 import io.appform.dropwizard.sharding.healthcheck.HealthCheckManager;
+import io.appform.dropwizard.sharding.sharding.InMemoryLocalShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.dropwizard.Configuration;
 import io.dropwizard.ConfiguredBundle;
@@ -53,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Base for bundles. This cannot be used by clients. Use one of the derived classes.
@@ -105,8 +107,6 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
         this(DEFAULT_NAMESPACE, Arrays.asList(classPathPrefixes));
     }
 
-    protected abstract ShardManager createShardManager(int numShards);
-
     protected abstract ShardManager createShardManager(int numShards, ShardBlacklistingStore blacklistingStore);
 
     private void init(final ImmutableList<Class<?>> inEntities) {
@@ -115,25 +115,23 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
 
         this.numShards = Integer.parseInt(numShardsEnv);
         val blacklistingStore = getBlacklistingStore();
-        this.shardManager = blacklistingStore != null
-                ? createShardManager(numShards, blacklistingStore)
-                : createShardManager(numShards);
+        this.shardManager = createShardManager(numShards, blacklistingStore);
         this.shardInfoProvider = new ShardInfoProvider(dbNamespace);
         this.healthCheckManager = new HealthCheckManager(dbNamespace, shardManager, shardInfoProvider);
-        for (int i = 0; i < numShards; i++) {
-            final int finalI = i;
-            shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
-                @Override
-                protected String name() {
-                    return shardInfoProvider.shardName(finalI);
-                }
 
-                @Override
-                public PooledDataSourceFactory getDataSourceFactory(T t) {
-                    return getConfig(t).getShards().get(finalI);
-                }
-            });
-        }
+        IntStream.range(0, numShards).forEach(
+                shard -> shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
+                    @Override
+                    protected String name() {
+                        return shardInfoProvider.shardName(shard);
+                    }
+
+                    @Override
+                    public PooledDataSourceFactory getDataSourceFactory(T t) {
+                        return getConfig(t).getShards().get(shard);
+                    }
+                })
+        );
     }
 
     @Override
@@ -177,7 +175,7 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
     protected abstract ShardedHibernateFactory getConfig(T config);
 
     protected ShardBlacklistingStore getBlacklistingStore() {
-        return null;
+        return new InMemoryLocalShardBlacklistingStore();
     }
 
     public static <EntityType, T extends Configuration>

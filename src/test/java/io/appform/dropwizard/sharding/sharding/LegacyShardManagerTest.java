@@ -41,21 +41,18 @@ public class LegacyShardManagerTest {
     @Test
     public void testShardFor64Bucket() throws Exception {
         LegacyShardManager shardManager = new LegacyShardManager(64);
-        System.out.println(shardManager);
         assertEquals(63, shardManager.shardForBucket(999));
     }
 
     @Test
     public void testShardFor32Bucket() throws Exception {
         LegacyShardManager shardManager = new LegacyShardManager(32);
-        System.out.println(shardManager);
         assertEquals(31, shardManager.shardForBucket(999));
     }
 
     @Test
     public void testShardFor16Bucket() throws Exception {
         LegacyShardManager shardManager = new LegacyShardManager(16);
-        System.out.println(shardManager);
         assertEquals(15, shardManager.shardForBucket(999));
     }
 }

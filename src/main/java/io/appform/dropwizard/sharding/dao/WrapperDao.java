@@ -52,7 +52,7 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> implements ShardedDao
      * Create a relational DAO.
      * @param sessionFactories List of session factories. One for each shard.
      * @param daoClass Class for the dao.
-     * @param shardCalculator
+     * @param shardCalculator {@link ShardCalculator} for finding shard
      */
     public WrapperDao(List<SessionFactory> sessionFactories, Class<DaoType> daoClass, ShardCalculator<String> shardCalculator) {
         this(sessionFactories, daoClass, null, null, shardCalculator);
@@ -64,7 +64,7 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> implements ShardedDao
      * @param daoClass Class for the dao.
      * @param extraConstructorParamClasses Class names for constructor parameters to the DAO other than SessionFactory
      * @param extraConstructorParamObjects Objects for constructor parameters to the DAO other than SessionFactory
-     * @param shardCalculator
+     * @param shardCalculator {@link ShardCalculator} for finding shard
      */
     public WrapperDao(
             List<SessionFactory> sessionFactories, Class<DaoType> daoClass,
@@ -100,8 +100,8 @@ public class WrapperDao<T, DaoType extends AbstractDAO<T>> implements ShardedDao
 
     /**
      * Get a fully formed DAO that localizes all dao operations to the shard for the given parentKey.
-     * @param parentKey
-     * @return
+     * @param parentKey key that will be used to find the shard
+     * @return Wrapper for parent dao
      */
     public DaoType forParent(final String parentKey) {
         return daos.get(shardCalculator.shardId(parentKey));

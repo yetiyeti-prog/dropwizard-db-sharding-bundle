@@ -55,12 +55,12 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * If you need lazy loading functionality use the alternate {@link LookupDao#get(String, Function)} method.
      * @param key The value of the key field to look for.
      * @return The entity
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     @Override
     public Optional<T> get(String key) throws Exception {
         if(cache.exists(key)) {
-            return Optional.ofNullable(cache.get(key));
+            return Optional.of(cache.get(key));
         }
         T entity = super.get(key, t -> t);
         if(entity != null) {
@@ -71,11 +71,10 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
 
     /**
      * Write through the entity on proper shard based on hash of the value in the key field in the object and into cache.
-     * Actual save will be delegated to {@link LookupDao#save(T)} method.
-     * <b>Note:</b> Lazy loading will not work on the augmented entity. Use the alternate {@link #save(Object, Function)} for that.
+     * <b>Note:</b> Lazy loading will not work on the augmented entity.
      * @param entity Entity to save
      * @return Entity
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     @Override
     public Optional<T> save(T entity) throws Exception {
@@ -92,7 +91,6 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * Actual save will be delegated to {@link LookupDao#update(String, Function)} method.
      * @param id Id of the entity that will be updated
      * @return True/False
-     * @throws Exception
      */
     @Override
     public boolean update(String id, Function<Optional<T>, T> updater) {
@@ -113,7 +111,7 @@ public class CacheableLookupDao<T> extends LookupDao<T> {
      * Cache miss will be delegated to {@link LookupDao#exists(String)} method.
      * @param key The value of the key field to look for.
      * @return Whether the entity exists or not
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     @Override
     public boolean exists(String key) throws Exception {

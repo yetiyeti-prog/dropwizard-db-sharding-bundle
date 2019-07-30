@@ -141,7 +141,7 @@ public class LookupDao<T> implements ShardedDao<T> {
      * Creates a new sharded DAO. The number of managed shards and bucketing is controlled by the {@link ShardManager}.
      *
      * @param sessionFactories a session provider for each shard
-     * @param shardCalculator
+     * @param shardCalculator calculator for shards
      */
     public LookupDao(
             List<SessionFactory> sessionFactories,
@@ -172,7 +172,7 @@ public class LookupDao<T> implements ShardedDao<T> {
      * If you need lazy loading functionality use the alternate {@link #get(String, Function)} method.
      * @param key The value of the key field to look for.
      * @return The entity
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     public Optional<T> get(String key) throws Exception {
         return Optional.ofNullable(get(key, t -> t));
@@ -186,7 +186,7 @@ public class LookupDao<T> implements ShardedDao<T> {
      * @param key The value of the key field to look for.
      * @param handler Handler function/lambda that receives the retrieved object.
      * @return Whatever is returned by the handler function
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     public <U> U get(String key, Function<T, U> handler) throws Exception {
         int shardId = shardCalculator.shardId(key);
@@ -198,7 +198,7 @@ public class LookupDao<T> implements ShardedDao<T> {
      * Check if object with specified key exists in any shard.
      * @param key id of the element to look for
      * @return true/false depending on if it's found or not.
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     public boolean exists(String key) throws Exception {
         return get(key).isPresent();
@@ -206,12 +206,12 @@ public class LookupDao<T> implements ShardedDao<T> {
 
     /**
      * Saves an entity on proper shard based on hash of the value in the key field in the object.
-     * The updated entity is returned. If {@link org.hibernate.annotations.Cascade} is specified, this can be used
+     * The updated entity is returned. If Cascade is specified, this can be used
      * to save an object tree based on the shard of the top entity that has the key field.
      * <b>Note:</b> Lazy loading will not work on the augmented entity. Use the alternate {@link #save(Object, Function)} for that.
      * @param entity Entity to save
      * @return Entity
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     public Optional<T> save(T entity) throws Exception {
         return Optional.ofNullable(save(entity, t -> t));
@@ -225,7 +225,7 @@ public class LookupDao<T> implements ShardedDao<T> {
      * @param entity The value of the key field to look for.
      * @param handler Handler function/lambda that receives the retrieved object.
      * @return The entity
-     * @throws Exception
+     * @throws Exception if backing dao throws
      */
     public <U> U save(T entity, Function<T, U> handler) throws Exception {
         final String key = keyField.get(entity).toString();

@@ -20,8 +20,12 @@ package io.appform.dropwizard.sharding;
 import com.codahale.metrics.health.HealthCheckRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import io.appform.dropwizard.sharding.DBShardingBundle;
-import io.appform.dropwizard.sharding.DBShardingBundleBase;
+import io.appform.dropwizard.sharding.config.ShardedHibernateFactory;
+import io.appform.dropwizard.sharding.dao.RelationalDao;
+import io.appform.dropwizard.sharding.dao.WrapperDao;
+import io.appform.dropwizard.sharding.dao.testdata.OrderDao;
+import io.appform.dropwizard.sharding.dao.testdata.entities.Order;
+import io.appform.dropwizard.sharding.dao.testdata.entities.OrderItem;
 import io.dropwizard.Configuration;
 import io.dropwizard.db.DataSourceFactory;
 import io.dropwizard.jersey.DropwizardResourceConfig;
@@ -30,12 +34,6 @@ import io.dropwizard.lifecycle.setup.LifecycleEnvironment;
 import io.dropwizard.setup.AdminEnvironment;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import io.appform.dropwizard.sharding.config.ShardedHibernateFactory;
-import io.appform.dropwizard.sharding.dao.RelationalDao;
-import io.appform.dropwizard.sharding.dao.WrapperDao;
-import io.appform.dropwizard.sharding.dao.testdata.OrderDao;
-import io.appform.dropwizard.sharding.dao.testdata.entities.Order;
-import io.appform.dropwizard.sharding.dao.testdata.entities.OrderItem;
 import lombok.Getter;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Restrictions;
@@ -67,7 +65,7 @@ public abstract class DBShardingBundleTestBase {
     protected final JerseyEnvironment jerseyEnvironment = mock(JerseyEnvironment.class);
     protected final LifecycleEnvironment lifecycleEnvironment = mock(LifecycleEnvironment.class);
     protected final Environment environment = mock(Environment.class);
-    protected final AdminEnvironment adminEnvironment= mock(AdminEnvironment.class);
+    protected final AdminEnvironment adminEnvironment = mock(AdminEnvironment.class);
     protected final Bootstrap<?> bootstrap = mock(Bootstrap.class);
 
 
@@ -106,11 +104,11 @@ public abstract class DBShardingBundleTestBase {
         bundle.runBundles(testConfig, environment);
         bundle.run(testConfig, environment);
 
-        WrapperDao<Order, OrderDao> dao = DBShardingBundle.createWrapperDao(bundle, OrderDao.class);
+        WrapperDao<Order, OrderDao> dao = bundle.createWrapperDao(OrderDao.class);
 
-        RelationalDao<Order> rDao = DBShardingBundle.createRelatedObjectDao(bundle, Order.class);
+        RelationalDao<Order> rDao = bundle.createRelatedObjectDao(Order.class);
 
-        RelationalDao<OrderItem> orderItemDao = DBShardingBundle.createRelatedObjectDao(bundle, OrderItem.class);
+        RelationalDao<OrderItem> orderItemDao = bundle.createRelatedObjectDao(OrderItem.class);
 
 
         final String customer = "customer1";

@@ -50,7 +50,7 @@ public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundl
         bundle.initBundles(bootstrap);
         bundle.runBundles(testConfig, environment);
         bundle.run(testConfig, environment);
-        LookupDao<MultiPackageTestEntity> lookupDao = DBShardingBundle.createParentObjectDao(bundle, MultiPackageTestEntity.class);
+        LookupDao<MultiPackageTestEntity> lookupDao = bundle.createParentObjectDao(MultiPackageTestEntity.class);
 
         MultiPackageTestEntity multiPackageTestEntity = MultiPackageTestEntity.builder()
                 .text("Testing multi package scanning")
@@ -63,7 +63,7 @@ public class LegacyDbShardingBundleWithMultipleClassPath extends DBShardingBundl
         Optional<MultiPackageTestEntity> fetchedMultiPackageTestEntity = lookupDao.get(multiPackageTestEntity.getLookup());
         Assert.assertEquals(saveMultiPackageTestEntity.get().getText(), fetchedMultiPackageTestEntity.get().getText());
 
-        LookupDao<TestEntity> testEntityLookupDao = DBShardingBundle.createParentObjectDao(bundle, TestEntity.class);
+        LookupDao<TestEntity> testEntityLookupDao = bundle.createParentObjectDao(TestEntity.class);
 
         TestEntity testEntity = TestEntity.builder()
                 .externalId("E123")

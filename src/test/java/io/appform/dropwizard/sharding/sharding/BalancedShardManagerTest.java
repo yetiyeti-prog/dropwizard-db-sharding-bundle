@@ -41,21 +41,18 @@ public class BalancedShardManagerTest {
     @Test
     public void testShardFor64Bucket() throws Exception {
         BalancedShardManager shardManager = new BalancedShardManager(64);
-        System.out.println(shardManager);
         assertEquals(63, shardManager.shardForBucket(1023));
     }
 
     @Test
     public void testShardFor32Bucket() throws Exception {
         BalancedShardManager shardManager = new BalancedShardManager(32);
-        System.out.println(shardManager);
         assertEquals(31, shardManager.shardForBucket(1023));
     }
 
     @Test
     public void testShardFor31Bucket() throws Exception {
         BalancedShardManager shardManager = new BalancedShardManager(16);
-        System.out.println(shardManager);
         assertEquals(15, shardManager.shardForBucket(1023));
     }
 }

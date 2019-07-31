@@ -84,8 +84,6 @@ public class LockTest {
                                 .name("Parent 1")
                                 .build();
         lookupDao.save(p1);
-        System.out.println(lookupDao.get("0").get().getName());
-
         lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
@@ -105,7 +103,6 @@ public class LockTest {
 
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
-        System.out.println(relationDao.get("0", 1L).get());
         Assert.assertEquals(6, relationDao.select("0", DetachedCriteria.forClass(SomeOtherObject.class), 0, 10).size());
         Assert.assertEquals("Hello",relationDao.get("0", 1L).get().getValue());
     }
@@ -116,8 +113,6 @@ public class LockTest {
                                 .myId("0")
                                 .build();
         lookupDao.save(p1);
-        System.out.println(lookupDao.get("0").get().getName());
-
         lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> {
@@ -177,7 +172,6 @@ public class LockTest {
 
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
-        System.out.println(relationDao.get("0", 1L).get());
         Assert.assertEquals("Hello Changed",relationDao.get("0", 1L).get().getValue());
     }
 
@@ -205,7 +199,6 @@ public class LockTest {
 
         Assert.assertEquals(p1.getMyId(), lookupDao.get("0").get().getMyId());
         Assert.assertEquals("Changed", lookupDao.get("0").get().getName());
-        System.out.println(relationDao.get("0", 1L).get());
         Assert.assertEquals("Hello Changed",relationDao.get("0", 1L).get().getValue());
     }
 

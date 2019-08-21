@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+
+import argparse
+import mmh3
+import numpy
+
+
+class FindShard(object):
+    """
+    Utility to find shard in python 3
+    """
+    MIN_BUCKET = 0
+    MAX_BUCKET = 999
+    NUM_BUCKETS = 16
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def __as_int(h):
+        return h[0] | numpy.int32(h[1] << 8) | numpy.int32(h[2] << 16) | numpy.int32(h[3] << 24)
+
+    @staticmethod
+    def __get_key(k):
+        return -1 * k if (k < 0) else k
+
+    @staticmethod
+    def get_bucket_id(the_key, min_bucket, max_bucket):
+        hash_key = FindShard.__as_int(mmh3.hash_bytes(the_key))
+        hash_key = FindShard.__get_key(hash_key)
+        return hash_key % (max_bucket - min_bucket + 1)
+
+    @staticmethod
+    def get_buckets(min_bucket, max_bucket, num_bucket):
+        buckets = dict()
+        shard_counter = 0
+        start = min_bucket
+        interval = max_bucket // num_bucket
+        end_reached = False
+        while not end_reached:
+            end = start + interval - 1
+            end_reached = not ((max_bucket - start) > (2 * interval))
+            end = max_bucket if end_reached else end
+            i = start
+            while i <= end:
+                buckets[i] = shard_counter
+                i += 1
+            shard_counter += 1
+            start += interval
+        return buckets
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--key", action='append', required=True,
+                        help="A key to search for. Can be specified multiple times for multiple keys.")
+    parser.add_argument("-s", "--num_bucket", type=int, default=FindShard.NUM_BUCKETS, required=False,
+                        help="total number of shards")
+    parser.add_argument("-min", "--min_bucket", type=int, default=FindShard.MIN_BUCKET, required=False,
+                        help="bucket range min value")
+    parser.add_argument("-max", "--max_bucket", type=int, default=FindShard.MAX_BUCKET, required=False,
+                        help="bucket range max value")
+
+    options = parser.parse_args()
+    # keys = options.keys.split(",")
+    keys = options.key
+    the_buckets = FindShard.get_buckets(options.min_bucket, options.max_bucket, options.num_bucket)
+    for key in keys:
+        bucket_id = FindShard.get_bucket_id(key, options.min_bucket, options.max_bucket)
+        shard = the_buckets[bucket_id]
+        print("%s -> %d" % (key, shard + 1))
+

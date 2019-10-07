@@ -24,6 +24,8 @@ public class BlacklistingAwareHealthCheck extends HealthCheck {
             log.info("returning healthy since shard is blacklisted [{}]", shardId);
             return Result.healthy();
         }
-        return baseHealthCheck.execute();
+        Result result = baseHealthCheck.execute();
+        log.debug(String.format("DBSharding HealthCheck: %s, %s", result.isHealthy(), result.getMessage()));
+        return result;
     }
 }

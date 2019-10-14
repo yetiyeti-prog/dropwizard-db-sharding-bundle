@@ -3,9 +3,6 @@ package io.appform.dropwizard.sharding;
 import org.junit.Assert;
 import org.junit.Test;
 
-/**
- * Created by kanika.khetawat on 14/10/19
- */
 public class ShardInfoProviderTest {
 
     @Test

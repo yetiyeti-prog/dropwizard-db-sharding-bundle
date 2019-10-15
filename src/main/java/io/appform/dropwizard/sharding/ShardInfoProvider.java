@@ -11,7 +11,7 @@ public class ShardInfoProvider {
 
     private final String namespace;
     private static final String SHARD_NAMING_FORMAT = "connectionpool-%s-%d";
-    private static final String SHARD_NAMING_REGEX = "connectionpool-(\\w)+-(\\d)+";
+    private static final String SHARD_NAMING_REGEX = "connectionpool-(\\w+)-(\\d+)";
     private static final Pattern SHARD_NAMING_PATTERN = Pattern.compile(SHARD_NAMING_REGEX);
 
 

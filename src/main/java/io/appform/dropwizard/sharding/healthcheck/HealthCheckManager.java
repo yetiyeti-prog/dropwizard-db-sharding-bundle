@@ -4,11 +4,9 @@ import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistryListener;
 import io.appform.dropwizard.sharding.ShardInfoProvider;
 import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
-import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.hibernate.SessionFactoryHealthCheck;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
-import lombok.val;
 
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -20,17 +18,15 @@ import java.util.stream.Collectors;
 public class HealthCheckManager implements HealthCheckRegistryListener {
 
     private final String namespace;
-    private final ShardManager shardManager;
     private final Map<String, ShardHealthCheckMeta> dbHealthChecks = new HashMap<>();
     private final Map<String, ShardHealthCheckMeta> wrappedHealthChecks = new HashMap<>();
     private final ShardInfoProvider shardInfoProvider;
     private final ShardBlacklistingStore blacklistingStore;
 
-    public HealthCheckManager(String namespace,
-                              ShardManager shardManager,
-                              ShardInfoProvider shardInfoProvider, ShardBlacklistingStore blacklistingStore) {
+    public HealthCheckManager(final String namespace,
+                              final ShardInfoProvider shardInfoProvider,
+                              final ShardBlacklistingStore blacklistingStore) {
         this.namespace = namespace;
-        this.shardManager = shardManager;
         this.shardInfoProvider = shardInfoProvider;
         this.blacklistingStore = blacklistingStore;
     }
@@ -67,7 +63,7 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     }
 
     public void manageHealthChecks(Environment environment) {
-        if (blacklistingStore == null){
+        if (blacklistingStore == null) {
             wrappedHealthChecks.putAll(dbHealthChecks);
             return;
         }

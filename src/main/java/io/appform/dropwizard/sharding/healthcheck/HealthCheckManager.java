@@ -3,6 +3,7 @@ package io.appform.dropwizard.sharding.healthcheck;
 import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistryListener;
 import io.appform.dropwizard.sharding.ShardInfoProvider;
+import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.hibernate.SessionFactoryHealthCheck;
 import io.dropwizard.setup.Environment;
@@ -23,13 +24,15 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     private final Map<String, ShardHealthCheckMeta> dbHealthChecks = new HashMap<>();
     private final Map<String, ShardHealthCheckMeta> wrappedHealthChecks = new HashMap<>();
     private final ShardInfoProvider shardInfoProvider;
+    private final ShardBlacklistingStore blacklistingStore;
 
     public HealthCheckManager(String namespace,
                               ShardManager shardManager,
-                              ShardInfoProvider shardInfoProvider) {
+                              ShardInfoProvider shardInfoProvider, ShardBlacklistingStore blacklistingStore) {
         this.namespace = namespace;
         this.shardManager = shardManager;
         this.shardInfoProvider = shardInfoProvider;
+        this.blacklistingStore = blacklistingStore;
     }
 
 
@@ -64,15 +67,13 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     }
 
     public void manageHealthChecks(Environment environment) {
+        if (blacklistingStore == null){
+            wrappedHealthChecks.putAll(dbHealthChecks);
+            return;
+        }
+
         dbHealthChecks.forEach((name, healthCheck) -> {
             environment.healthChecks().unregister(name);
-            val hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
-                    healthCheck.getHealthCheck(), shardManager);
-            environment.healthChecks().register(name, hc);
-            wrappedHealthChecks.put(name, ShardHealthCheckMeta.builder()
-                    .healthCheck(hc)
-                    .shardId(healthCheck.getShardId())
-                    .build());
         });
     }
 

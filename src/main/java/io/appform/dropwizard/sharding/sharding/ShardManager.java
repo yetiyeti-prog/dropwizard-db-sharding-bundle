@@ -44,11 +44,10 @@ public abstract class ShardManager {
 
     protected ShardManager(ShardBlacklistingStore shardBlacklistingStore) {
         this.shardBlacklistingStore = shardBlacklistingStore;
-
         this.blackListedShards = Caffeine.newBuilder()
                 .maximumSize(10_000)
-                .expireAfterWrite(5, TimeUnit.MINUTES)
-                .refreshAfterWrite(1, TimeUnit.MINUTES)
+                .expireAfterWrite(1, TimeUnit.MINUTES)
+                .refreshAfterWrite(15, TimeUnit.SECONDS)
                 .build(shardBlacklistingStore::blacklisted);
     }
 

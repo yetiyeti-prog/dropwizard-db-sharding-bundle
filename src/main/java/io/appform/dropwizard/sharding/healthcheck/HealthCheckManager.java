@@ -4,6 +4,7 @@ import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistryListener;
 import io.appform.dropwizard.sharding.ShardInfoProvider;
 import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
+import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.hibernate.SessionFactoryHealthCheck;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
@@ -22,13 +23,16 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     private final Map<String, ShardHealthCheckMeta> wrappedHealthChecks = new HashMap<>();
     private final ShardInfoProvider shardInfoProvider;
     private final ShardBlacklistingStore blacklistingStore;
+    private final ShardManager shardManager;
 
     public HealthCheckManager(final String namespace,
                               final ShardInfoProvider shardInfoProvider,
-                              final ShardBlacklistingStore blacklistingStore) {
+                              final ShardBlacklistingStore blacklistingStore,
+                              final ShardManager shardManager) {
         this.namespace = namespace;
         this.shardInfoProvider = shardInfoProvider;
         this.blacklistingStore = blacklistingStore;
+        this.shardManager = shardManager;
     }
 
 
@@ -63,13 +67,15 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     }
 
     public void manageHealthChecks(Environment environment) {
-        if (blacklistingStore == null) {
-            wrappedHealthChecks.putAll(dbHealthChecks);
-            return;
-        }
-
         dbHealthChecks.forEach((name, healthCheck) -> {
             environment.healthChecks().unregister(name);
+            BlacklistingAwareHealthCheck hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
+                    healthCheck.getHealthCheck(), shardManager, blacklistingStore);
+            environment.healthChecks().register(name, hc);
+            wrappedHealthChecks.put(name, ShardHealthCheckMeta.builder()
+                    .healthCheck(hc)
+                    .shardId(healthCheck.getShardId())
+                    .build());
         });
     }
 

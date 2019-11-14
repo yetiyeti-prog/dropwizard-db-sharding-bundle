@@ -115,7 +115,7 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
         val blacklistingStore = getBlacklistingStore();
         this.shardManager = createShardManager(numShards, blacklistingStore);
         this.shardInfoProvider = new ShardInfoProvider(dbNamespace);
-        this.healthCheckManager = new HealthCheckManager(dbNamespace, shardInfoProvider, blacklistingStore);
+        this.healthCheckManager = new HealthCheckManager(dbNamespace, shardInfoProvider, blacklistingStore, shardManager);
 
         IntStream.range(0, numShards).forEach(
                 shard -> shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {

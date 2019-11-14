@@ -41,4 +41,9 @@ public class InMemoryLocalShardBlacklistingStore implements ShardBlacklistingSto
     public boolean blacklisted(int shardId) {
         return blacklisted.getOrDefault(shardId, false);
     }
+
+    @Override
+    public boolean disableNativeHealthCheck() {
+        return false;
+    }
 }

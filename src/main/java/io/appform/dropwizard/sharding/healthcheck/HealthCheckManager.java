@@ -8,6 +8,7 @@ import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.hibernate.SessionFactoryHealthCheck;
 import io.dropwizard.setup.Environment;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import java.util.AbstractMap;
 import java.util.HashMap;
@@ -69,7 +70,7 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     public void manageHealthChecks(Environment environment) {
         dbHealthChecks.forEach((name, healthCheck) -> {
             environment.healthChecks().unregister(name);
-            BlacklistingAwareHealthCheck hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
+            val hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
                     healthCheck.getHealthCheck(), shardManager, blacklistingStore);
             environment.healthChecks().register(name, hc);
             wrappedHealthChecks.put(name, ShardHealthCheckMeta.builder()

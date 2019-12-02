@@ -27,12 +27,12 @@ public class BlacklistingAwareHealthCheck extends HealthCheck {
 
     @Override
     protected Result check() {
-        if (shardManager.isBlacklisted(shardId)) {
-            log.info("returning healthy since shard is blacklisted [{}]", shardId);
+        if (blacklistConfig.isSkipNativeHealthcheck()) {
             return Result.healthy();
         }
 
-        if (blacklistConfig.isSkipNativeHealthcheck()) {
+        if (shardManager.isBlacklisted(shardId)) {
+            log.info("returning healthy since shard is blacklisted [{}]", shardId);
             return Result.healthy();
         }
 

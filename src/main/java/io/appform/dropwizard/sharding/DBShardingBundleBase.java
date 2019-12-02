@@ -116,7 +116,6 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
         this.shardManager = createShardManager(numShards, blacklistingStore);
         this.shardInfoProvider = new ShardInfoProvider(dbNamespace);
         this.healthCheckManager = new HealthCheckManager(dbNamespace, shardInfoProvider, blacklistingStore, shardManager);
-
         IntStream.range(0, numShards).forEach(
                 shard -> shardBundles.add(new HibernateBundle<T>(inEntities, new SessionFactoryFactory()) {
                     @Override
@@ -137,7 +136,7 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
         sessionFactories = shardBundles.stream().map(HibernateBundle::getSessionFactory).collect(Collectors.toList());
         environment.admin().addTask(new BlacklistShardTask(shardManager));
         environment.admin().addTask(new UnblacklistShardTask(shardManager));
-        healthCheckManager.manageHealthChecks(environment);
+        healthCheckManager.manageHealthChecks(getConfig(configuration).getBlacklist(), environment);
     }
 
 

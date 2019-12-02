@@ -2,7 +2,7 @@
 package io.appform.dropwizard.sharding.healthcheck;
 
 import com.codahale.metrics.health.HealthCheck;
-import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
+import io.appform.dropwizard.sharding.config.BlacklistConfig;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,16 +13,16 @@ public class BlacklistingAwareHealthCheck extends HealthCheck {
     private final int shardId;
     private final HealthCheck baseHealthCheck;
     private final ShardManager shardManager;
-    private final ShardBlacklistingStore blacklistingStore;
+    private final BlacklistConfig blacklistConfig;
 
     public BlacklistingAwareHealthCheck(final int shardId,
                                         final HealthCheck baseHealthCheck,
                                         final ShardManager shardManager,
-                                        final ShardBlacklistingStore blacklistingStore) {
+                                        final BlacklistConfig blacklistConfig) {
         this.shardId = shardId;
         this.baseHealthCheck = baseHealthCheck;
         this.shardManager = shardManager;
-        this.blacklistingStore = blacklistingStore;
+        this.blacklistConfig = blacklistConfig;
     }
 
     @Override
@@ -32,7 +32,7 @@ public class BlacklistingAwareHealthCheck extends HealthCheck {
             return Result.healthy();
         }
 
-        if (blacklistingStore.disableNativeHealthCheck()){
+        if (blacklistConfig.isSkipNativeHealthcheck()) {
             return Result.healthy();
         }
 

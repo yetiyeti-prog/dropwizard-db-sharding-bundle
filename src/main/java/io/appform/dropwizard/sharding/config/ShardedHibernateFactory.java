@@ -40,4 +40,7 @@ public class ShardedHibernateFactory {
     @Valid
     @Singular
     private List<DataSourceFactory> shards = Lists.newArrayList();
+
+    @Valid
+    private BlacklistConfig blacklist;
 }

@@ -72,17 +72,21 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
 
     public void manageHealthChecks(final BlacklistConfig blacklistConfig,
                                    final Environment environment) {
-        if (blacklistingStore == null){
+        if (blacklistingStore == null) {
             wrappedHealthChecks.putAll(dbHealthChecks);
             return;
         }
+
+        val blacklistingConfig = blacklistConfig != null
+                ? blacklistConfig
+                : BlacklistConfig.builder().skipNativeHealthcheck(false).build();
 
         dbHealthChecks.forEach((name, healthCheck) -> {
             environment.healthChecks().unregister(name);
             val hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
                     healthCheck.getHealthCheck(),
                     shardManager,
-                    blacklistConfig);
+                    blacklistingConfig);
             environment.healthChecks().register(name, hc);
             wrappedHealthChecks.put(name, ShardHealthCheckMeta.builder()
                     .healthCheck(hc)

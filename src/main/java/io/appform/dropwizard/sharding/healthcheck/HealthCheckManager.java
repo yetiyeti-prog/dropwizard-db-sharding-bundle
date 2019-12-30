@@ -3,6 +3,8 @@ package io.appform.dropwizard.sharding.healthcheck;
 import com.codahale.metrics.health.HealthCheck;
 import com.codahale.metrics.health.HealthCheckRegistryListener;
 import io.appform.dropwizard.sharding.ShardInfoProvider;
+import io.appform.dropwizard.sharding.config.BlacklistConfig;
+import io.appform.dropwizard.sharding.sharding.ShardBlacklistingStore;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.dropwizard.hibernate.SessionFactoryHealthCheck;
 import io.dropwizard.setup.Environment;
@@ -19,22 +21,26 @@ import java.util.stream.Collectors;
 public class HealthCheckManager implements HealthCheckRegistryListener {
 
     private final String namespace;
-    private final ShardManager shardManager;
     private final Map<String, ShardHealthCheckMeta> dbHealthChecks = new HashMap<>();
     private final Map<String, ShardHealthCheckMeta> wrappedHealthChecks = new HashMap<>();
     private final ShardInfoProvider shardInfoProvider;
+    private ShardBlacklistingStore blacklistingStore;
+    private final ShardManager shardManager;
 
-    public HealthCheckManager(String namespace,
-                              ShardManager shardManager,
-                              ShardInfoProvider shardInfoProvider) {
+    public HealthCheckManager(final String namespace,
+                              final ShardInfoProvider shardInfoProvider,
+                              final ShardBlacklistingStore blacklistingStore,
+                              final ShardManager shardManager) {
         this.namespace = namespace;
-        this.shardManager = shardManager;
         this.shardInfoProvider = shardInfoProvider;
+        this.blacklistingStore = blacklistingStore;
+        this.shardManager = shardManager;
     }
 
 
     @Override
-    public void onHealthCheckAdded(String name, HealthCheck healthCheck) {
+    public void onHealthCheckAdded(final String name,
+                                   final HealthCheck healthCheck) {
         if (!(healthCheck instanceof SessionFactoryHealthCheck)) {
             return;
         }
@@ -57,17 +63,30 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     }
 
     @Override
-    public void onHealthCheckRemoved(String s, HealthCheck healthCheck) {
+    public void onHealthCheckRemoved(final String name,
+                                     final HealthCheck healthCheck) {
         /*
         nothing needs to be done here
         */
     }
 
-    public void manageHealthChecks(Environment environment) {
+    public void manageHealthChecks(final BlacklistConfig blacklistConfig,
+                                   final Environment environment) {
+        if (blacklistingStore == null) {
+            wrappedHealthChecks.putAll(dbHealthChecks);
+            return;
+        }
+
+        val blacklistingConfig = blacklistConfig != null
+                ? blacklistConfig
+                : BlacklistConfig.builder().skipNativeHealthcheck(false).build();
+
         dbHealthChecks.forEach((name, healthCheck) -> {
             environment.healthChecks().unregister(name);
             val hc = new BlacklistingAwareHealthCheck(healthCheck.getShardId(),
-                    healthCheck.getHealthCheck(), shardManager);
+                    healthCheck.getHealthCheck(),
+                    shardManager,
+                    blacklistingConfig);
             environment.healthChecks().register(name, hc);
             wrappedHealthChecks.put(name, ShardHealthCheckMeta.builder()
                     .healthCheck(hc)

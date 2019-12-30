@@ -21,7 +21,11 @@ package io.appform.dropwizard.sharding.sharding;
  *
  */
 public interface ShardBlacklistingStore {
+
     void blacklist(int shardId);
+
     void unblacklist(int shardId);
+
     boolean blacklisted(int shardId);
+
 }

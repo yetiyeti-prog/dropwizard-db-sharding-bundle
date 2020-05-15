@@ -33,6 +33,7 @@ import org.hibernate.LockMode;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 
 import java.lang.reflect.Field;
@@ -114,6 +115,12 @@ public class LookupDao<T> implements ShardedDao<T> {
          */
         List<T> select(DetachedCriteria criteria) {
             return list(criteria.getExecutableCriteria(currentSession()));
+        }
+
+        long count(DetachedCriteria criteria) {
+            return  (long)criteria.getExecutableCriteria(currentSession())
+                    .setProjection(Projections.rowCount())
+                    .uniqueResult();
         }
 
         /**
@@ -294,6 +301,22 @@ public class LookupDao<T> implements ShardedDao<T> {
                 throw new RuntimeException(e);
             }
         }).flatMap(Collection::stream).collect(Collectors.toList());
+    }
+
+    /**
+     * Queries using the specified criteria across all shards and returns the counts of rows satisfying the criteria.
+     * <b>Note:</b> This method runs the query serially and it's usage is not recommended.
+     * @param criteria The select criteria
+     * @return List of counts in each shard
+     */
+    public List<Long> count(DetachedCriteria criteria) {
+        return daos.stream().map(dao -> {
+            try {
+                return Transactions.execute(dao.sessionFactory, true, dao::count, criteria);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
     }
 
     /**

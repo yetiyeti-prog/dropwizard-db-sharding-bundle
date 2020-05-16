@@ -302,4 +302,37 @@ public class LookupDaoTest {
         Assert.assertNull(lookupDao.get("testId")
                                   .orElse(null));
     }
+
+    @Test
+    public void testCount() throws Exception {
+        DetachedCriteria criteria = DetachedCriteria.forClass(TestEntity.class)
+                .add(Restrictions.eq("text", "TEST_TYPE"));
+
+        Assert.assertEquals(
+                0L,
+                (long)lookupDao.count(criteria).stream().reduce(0L, Long::sum)
+        );
+
+        TestEntity testEntity = TestEntity.builder()
+                .externalId("testId2")
+                .text("TEST_TYPE")
+                .build();
+        lookupDao.save(testEntity);
+
+        testEntity.setExternalId("testId3");
+        lookupDao.save(testEntity);
+
+        Assert.assertEquals(
+                2L,
+                (long)lookupDao.count(criteria).stream().reduce(0L, Long::sum)
+        );
+
+
+        lookupDao.delete("testId2");
+        Assert.assertEquals(
+                1L,
+                (long)lookupDao.count(criteria).stream().reduce(0L, Long::sum)
+        );
+
+    }
 }

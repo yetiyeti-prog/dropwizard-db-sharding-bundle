@@ -138,7 +138,7 @@ public class LookupDao<T> implements ShardedDao<T> {
         }
 
         public int update(final UpdateParams updateParams) {
-            Query<T> query = currentSession().createNamedQuery(updateParams.getQueryName(), entityClass);
+            Query query = currentSession().createNamedQuery(updateParams.getQueryName());
             updateParams.getParams().forEach(query::setParameter);
             return query.executeUpdate();
         }

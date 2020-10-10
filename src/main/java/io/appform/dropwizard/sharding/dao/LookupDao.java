@@ -137,7 +137,7 @@ public class LookupDao<T> implements ShardedDao<T> {
 
         }
 
-        public int update(final QueryParams updateParams) {
+        public int update(final UpdateParams updateParams) {
             Query<T> query = currentSession().createNamedQuery(updateParams.getQueryName(), entityClass);
             updateParams.getParams().forEach(query::setParameter);
             return query.executeUpdate();
@@ -261,7 +261,7 @@ public class LookupDao<T> implements ShardedDao<T> {
         return updateImpl(id, dao::get, updater, dao);
     }
 
-    public int updateUsingQuery(String id, QueryParams updateParams) {
+    public int updateUsingQuery(String id, UpdateParams updateParams) {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::update, updateParams);

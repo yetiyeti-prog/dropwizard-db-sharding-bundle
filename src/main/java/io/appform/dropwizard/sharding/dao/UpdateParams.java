@@ -7,7 +7,7 @@ import java.util.Map;
 
 @Data
 @Builder
-public class QueryParams {
+public class UpdateParams {
 
     private String queryName;
 

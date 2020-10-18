@@ -45,6 +45,7 @@ import io.dropwizard.setup.Environment;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.SessionFactory;
 import org.reflections.Reflections;
 
@@ -108,9 +109,9 @@ abstract class DBShardingBundleBase<T extends Configuration> implements Configur
     protected abstract ShardManager createShardManager(int numShards, ShardBlacklistingStore blacklistingStore);
 
     private void init(final ImmutableList<Class<?>> inEntities) {
-        String numShardsEnv = System.getProperty(String.join(".", dbNamespace, DEFAULT_NAMESPACE),
-                System.getProperty(SHARD_ENV, DEFAULT_SHARDS));
-
+        boolean defaultNamespace = StringUtils.equalsIgnoreCase(dbNamespace, DEFAULT_NAMESPACE);
+        val numShardsProperty = defaultNamespace ? SHARD_ENV : String.join(".", dbNamespace, SHARD_ENV);
+        String numShardsEnv = System.getProperty(numShardsProperty, DEFAULT_SHARDS);
         this.numShards = Integer.parseInt(numShardsEnv);
         val blacklistingStore = getBlacklistingStore();
         this.shardManager = createShardManager(numShards, blacklistingStore);

@@ -298,8 +298,13 @@ public class RelationalDao<T> implements ShardedDao<T> {
 
     public int updateUsingQuery(String parentKey, UpdateParams updateParams) {
         int shardId = shardCalculator.shardId(parentKey);
-        RelationalDao.RelationalDaoPriv dao = daos.get(shardId);
+        val dao = daos.get(shardId);
         return Transactions.execute(dao.sessionFactory, false, dao::update, updateParams);
+    }
+
+    public <U> int updateUsingQuery(LookupDao.LockedContext<U> lockedContext, UpdateParams updateParams) {
+        val dao = daos.get(lockedContext.getShardId());
+        return Transactions.execute(lockedContext.getSessionFactory(), false, dao::update, updateParams, false);
     }
 
 

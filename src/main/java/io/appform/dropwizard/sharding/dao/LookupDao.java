@@ -455,6 +455,16 @@ public class LookupDao<T> implements ShardedDao<T> {
             });
         }
 
+        public<U> LockedContext<T> updateUsingQuery(RelationalDao<U> relationalDao, UpdateParams updateParams) {
+            return apply(parent-> {
+                try {
+                    relationalDao.updateUsingQuery(this, updateParams);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
 
         public<U> LockedContext<T> update(RelationalDao<U> relationalDao, Object id, Function<U, U> handler) {
             return apply(parent-> {

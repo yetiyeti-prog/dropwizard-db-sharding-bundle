@@ -18,12 +18,15 @@
 package io.appform.dropwizard.sharding.dao.locktest;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.appform.dropwizard.sharding.dao.LookupDao;
 import io.appform.dropwizard.sharding.dao.RelationalDao;
+import io.appform.dropwizard.sharding.dao.UpdateParams;
 import io.appform.dropwizard.sharding.sharding.BalancedShardManager;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
+import lombok.val;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
@@ -39,6 +42,9 @@ import org.junit.Test;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test locking behavior
@@ -87,13 +93,13 @@ public class LockTest {
         lookupDao.lockAndGetExecutor("0")
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
-                        .my_id(parent.getMyId())
+                        .myId(parent.getMyId())
                         .value("Hello")
                         .build())
                 .saveAll(relationDao,
                         parent -> IntStream.range(1,6)
                             .mapToObj(i -> SomeOtherObject.builder()
-                                    .my_id(parent.getMyId())
+                                    .myId(parent.getMyId())
                                     .value(String.format("Hello_%s", i))
                                     .build())
                         .collect(Collectors.toList())
@@ -117,7 +123,7 @@ public class LockTest {
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> {
                     SomeOtherObject result = SomeOtherObject.builder()
-                            .my_id(parent.getMyId())
+                            .myId(parent.getMyId())
                             .value("Hello")
                             .build();
                     parent.setName("Changed");
@@ -138,7 +144,7 @@ public class LockTest {
         lookupDao.saveAndGetExecutor(p1)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
-                        .my_id(parent.getMyId())
+                        .myId(parent.getMyId())
                         .value("Hello")
                         .build())
                 .mutate(parent -> parent.setName("Changed"))
@@ -156,7 +162,7 @@ public class LockTest {
                 .build();
 
         SomeOtherObject c1 = relationDao.save(p1.getMyId(), SomeOtherObject.builder()
-                .my_id(p1.getMyId())
+                .myId(p1.getMyId())
                 .value("Hello")
                 .build()).get();
 
@@ -183,7 +189,7 @@ public class LockTest {
                 .build();
 
         SomeOtherObject c1 = relationDao.save(p1.getMyId(), SomeOtherObject.builder()
-                .my_id(p1.getMyId())
+                .myId(p1.getMyId())
                 .value("Hello")
                 .build()).get();
 
@@ -219,7 +225,7 @@ public class LockTest {
         lookupDao.saveAndGetExecutor(p2)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
-                        .my_id(parent.getMyId())
+                        .myId(parent.getMyId())
                         .value("Hello")
                         .build())
                 .execute();
@@ -240,7 +246,7 @@ public class LockTest {
         lookupDao.saveAndGetExecutor(p1)
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
-                        .my_id(parent.getMyId())
+                        .myId(parent.getMyId())
                         .value("Hello")
                         .build())
                 .mutate(parent -> parent.setName("Changed"))
@@ -260,7 +266,7 @@ public class LockTest {
         lookupDao.save(parent);
 
         final SomeOtherObject child = relationDao.save(parent.getMyId(), SomeOtherObject.builder()
-                .my_id(parent.getMyId())
+                .myId(parent.getMyId())
                 .value("Hello")
                 .build()).get();
 
@@ -269,7 +275,7 @@ public class LockTest {
         final String childModifiedValue = "Hello Modified";
         final String parentModifiedValue = "Changed";
         final DetachedCriteria updateCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
-                .add(Restrictions.eq("my_id", parent.getMyId()));
+                .add(Restrictions.eq("myId", parent.getMyId()));
 
         lookupDao.lockAndGetExecutor(parent.getMyId())
                 .createOrUpdate(relationDao, updateCriteria, childObj -> {
@@ -278,7 +284,7 @@ public class LockTest {
                 }, () -> {
                     Assert.fail("New Entity is getting created. It should have been updated.");
                     return SomeOtherObject.builder()
-                            .my_id(parentId)
+                            .myId(parentId)
                             .value("test")
                             .build();
                 })
@@ -303,7 +309,7 @@ public class LockTest {
                     return childObj;
 
                 }, () -> SomeOtherObject.builder()
-                            .my_id(parentId)
+                            .myId(parentId)
                             .value(newChildValue)
                             .build())
                 .mutate(parentObj -> parentObj.setName(newParentValue))
@@ -316,6 +322,36 @@ public class LockTest {
     }
 
     @Test
+    public void testUpdateUsingQuery() throws Exception {
+        val parentId = "1";
+        val parent = SomeLookupObject.builder()
+                .myId(parentId)
+                .name("Parent 1")
+                .build();
+        lookupDao.save(parent);
+
+        val child = relationDao.save(parent.getMyId(), SomeOtherObject.builder()
+                .myId(parent.getMyId())
+                .value("Hello")
+                .build()).get();
+
+        val childModifiedValue = "Hello Modified";
+
+        lookupDao.lockAndGetExecutor(parent.getMyId())
+                .updateUsingQuery(relationDao,
+                        UpdateParams.builder()
+                                .queryName("testUpdateUsingMyId")
+                                .params(ImmutableMap.of("value", childModifiedValue, "myId", parent.getMyId()))
+                                .build())
+                .execute();
+
+        val updatedChild = relationDao.get(parent.getMyId(), child.getId()).orElse(null);
+        assertNotNull(updatedChild);
+        assertEquals(childModifiedValue, updatedChild.getValue());
+    }
+
+
+    @Test
     public void testUpdateWithScroll() throws Exception {
         final String parent1Id = "0";
         final SomeLookupObject parent1 = SomeLookupObject.builder()
@@ -324,12 +360,12 @@ public class LockTest {
                 .build();
 
         final SomeOtherObject child1 = relationDao.save(parent1.getMyId(), SomeOtherObject.builder()
-                .my_id(parent1.getMyId())
+                .myId(parent1.getMyId())
                 .value("Hello1")
                 .build()).get();
 
         final SomeOtherObject child2 = relationDao.save(parent1.getMyId(), SomeOtherObject.builder()
-                .my_id(parent1.getMyId())
+                .myId(parent1.getMyId())
                 .value("Hello2")
                 .build()).get();
 
@@ -340,7 +376,7 @@ public class LockTest {
                 .build();
 
         final SomeOtherObject child3 = relationDao.save(parent2.getMyId(), SomeOtherObject.builder()
-                .my_id(parent2.getMyId())
+                .myId(parent2.getMyId())
                 .value("Hello3")
                 .build()).get();
 
@@ -349,7 +385,7 @@ public class LockTest {
 
         //test full update
         final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
-                .add(Restrictions.eq("my_id", parent1.getMyId()))
+                .add(Restrictions.eq("myId", parent1.getMyId()))
                 .addOrder(Order.asc("id"));
 
         final String childModifiedValue = "Hello Modified";

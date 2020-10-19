@@ -24,7 +24,7 @@ public class HealthCheckManager implements HealthCheckRegistryListener {
     private final Map<String, ShardHealthCheckMeta> dbHealthChecks = new HashMap<>();
     private final Map<String, ShardHealthCheckMeta> wrappedHealthChecks = new HashMap<>();
     private final ShardInfoProvider shardInfoProvider;
-    private ShardBlacklistingStore blacklistingStore;
+    private final ShardBlacklistingStore blacklistingStore;
     private final ShardManager shardManager;
 
     public HealthCheckManager(final String namespace,

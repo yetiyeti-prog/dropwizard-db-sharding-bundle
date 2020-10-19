@@ -16,7 +16,7 @@ public class ShardInfoProvider {
 
 
     @Builder
-    public ShardInfoProvider(String namespace) {
+    public ShardInfoProvider(final String namespace) {
         this.namespace = namespace;
     }
 

@@ -32,20 +32,22 @@ import javax.persistence.*;
 @NoArgsConstructor
 @ToString
 @Data
+@NamedQueries({
+        @NamedQuery(name = "testUpdateUsingMyId", query = "update SomeOtherObject set value = :value where myId =:myId")})
 public class SomeOtherObject {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
 
     @Column(name = "my_id")
-    private String my_id;
+    private String myId;
 
     @Column(name = "value")
     private String value;
 
     @Builder
-    public SomeOtherObject(String my_id, String value) {
-        this.my_id = my_id;
+    public SomeOtherObject(String myId, String value) {
+        this.myId = myId;
         this.value = value;
     }
 }

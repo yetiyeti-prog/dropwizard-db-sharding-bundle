@@ -19,12 +19,12 @@ package io.appform.dropwizard.sharding.dao;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import io.dropwizard.hibernate.AbstractDAO;
 import io.appform.dropwizard.sharding.sharding.LookupKey;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
 import io.appform.dropwizard.sharding.utils.TransactionHandler;
 import io.appform.dropwizard.sharding.utils.Transactions;
+import io.dropwizard.hibernate.AbstractDAO;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ClassUtils;
@@ -35,6 +35,7 @@ import org.hibernate.SessionFactory;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.query.Query;
 
 import java.lang.reflect.Field;
 import java.util.Collection;
@@ -134,6 +135,12 @@ public class LookupDao<T> implements ShardedDao<T> {
                         })
                         .orElse(false);
 
+        }
+
+        public int update(final UpdateOperationMeta updateOperationMeta) {
+            Query query = currentSession().createNamedQuery(updateOperationMeta.getQueryName());
+            updateOperationMeta.getParams().forEach(query::setParameter);
+            return query.executeUpdate();
         }
     }
 
@@ -252,6 +259,12 @@ public class LookupDao<T> implements ShardedDao<T> {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
         return updateImpl(id, dao::get, updater, dao);
+    }
+
+    public int updateUsingQuery(String id, UpdateOperationMeta updateOperationMeta) {
+        int shardId = shardCalculator.shardId(id);
+        LookupDaoPriv dao = daos.get(shardId);
+        return Transactions.execute(dao.sessionFactory, false, dao::update, updateOperationMeta);
     }
 
     private boolean updateImpl(String id, Function<String, T> getter, Function<Optional<T>, T> updater, LookupDaoPriv dao) {
@@ -442,6 +455,16 @@ public class LookupDao<T> implements ShardedDao<T> {
             });
         }
 
+        public<U> LockedContext<T> updateUsingQuery(RelationalDao<U> relationalDao, UpdateOperationMeta updateOperationMeta) {
+            return apply(parent-> {
+                try {
+                    relationalDao.updateUsingQuery(this, updateOperationMeta);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                return null;
+            });
+        }
 
         public<U> LockedContext<T> update(RelationalDao<U> relationalDao, Object id, Function<U, U> handler) {
             return apply(parent-> {

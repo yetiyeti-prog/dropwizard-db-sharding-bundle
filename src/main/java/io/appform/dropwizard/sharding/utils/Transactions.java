@@ -42,6 +42,10 @@ public class Transactions {
         return execute(sessionFactory, readOnly, function, arg, t -> t);
     }
 
+    public static <T, U> T execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, boolean completeTransaction) {
+        return execute(sessionFactory, readOnly, function, arg, t -> t, completeTransaction);
+    }
+
     public static <T, U, V> V execute(SessionFactory sessionFactory, boolean readOnly, Function<U, T> function, U arg, Function<T, V> handler) {
         return execute(sessionFactory, readOnly, function, arg, handler, true);
     }

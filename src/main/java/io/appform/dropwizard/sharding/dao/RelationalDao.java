@@ -30,6 +30,7 @@ import org.hibernate.*;
 import org.hibernate.criterion.DetachedCriteria;
 import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
+import org.hibernate.query.Query;
 
 import javax.persistence.Id;
 import java.lang.reflect.Field;
@@ -101,6 +102,12 @@ public class RelationalDao<T> implements ShardedDao<T> {
             return  (long)criteria.getExecutableCriteria(currentSession())
                             .setProjection(Projections.rowCount())
                             .uniqueResult();
+        }
+
+        public int update(final UpdateOperationMeta updateOperationMeta) {
+            Query query = currentSession().createNamedQuery(updateOperationMeta.getQueryName());
+            updateOperationMeta.getParams().forEach(query::setParameter);
+            return query.executeUpdate();
         }
 
     }
@@ -288,6 +295,18 @@ public class RelationalDao<T> implements ShardedDao<T> {
             throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
         }
     }
+
+    public int updateUsingQuery(String parentKey, UpdateOperationMeta updateOperationMeta) {
+        int shardId = shardCalculator.shardId(parentKey);
+        val dao = daos.get(shardId);
+        return Transactions.execute(dao.sessionFactory, false, dao::update, updateOperationMeta);
+    }
+
+    public <U> int updateUsingQuery(LookupDao.LockedContext<U> lockedContext, UpdateOperationMeta updateOperationMeta) {
+        val dao = daos.get(lockedContext.getShardId());
+        return Transactions.execute(lockedContext.getSessionFactory(), false, dao::update, updateOperationMeta, false);
+    }
+
 
     <U> boolean createOrUpdate(LookupDao.LockedContext<U> context,
                                DetachedCriteria criteria,

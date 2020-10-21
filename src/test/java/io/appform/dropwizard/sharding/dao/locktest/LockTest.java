@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.appform.dropwizard.sharding.dao.LookupDao;
 import io.appform.dropwizard.sharding.dao.RelationalDao;
-import io.appform.dropwizard.sharding.dao.UpdateParams;
+import io.appform.dropwizard.sharding.dao.UpdateOperationMeta;
 import io.appform.dropwizard.sharding.sharding.BalancedShardManager;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
@@ -339,7 +339,7 @@ public class LockTest {
 
         lookupDao.lockAndGetExecutor(parent.getMyId())
                 .updateUsingQuery(relationDao,
-                        UpdateParams.builder()
+                        UpdateOperationMeta.builder()
                                 .queryName("testUpdateUsingMyId")
                                 .params(ImmutableMap.of("value", childModifiedValue, "myId", parent.getMyId()))
                                 .build())

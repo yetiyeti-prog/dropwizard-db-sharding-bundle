@@ -205,7 +205,7 @@ public class LookupDaoTest {
         lookupDao.save(testEntity);
 
         val newText = UUID.randomUUID().toString();
-        int rowsUpdated = lookupDao.updateUsingQuery(id, UpdateParams.builder()
+        int rowsUpdated = lookupDao.updateUsingQuery(id, UpdateOperationMeta.builder()
                 .queryName("testTextUpdateQuery")
                 .params(ImmutableMap.of("externalId", id,
                         "text", newText))
@@ -227,7 +227,7 @@ public class LookupDaoTest {
         lookupDao.save(testEntity);
 
         val newText = UUID.randomUUID().toString();
-        int rowsUpdated = lookupDao.updateUsingQuery(id, UpdateParams.builder()
+        int rowsUpdated = lookupDao.updateUsingQuery(id, UpdateOperationMeta.builder()
                 .queryName("testTextUpdateQuery")
                 .params(ImmutableMap.of("externalId", UUID.randomUUID().toString(),
                         "text", newText))

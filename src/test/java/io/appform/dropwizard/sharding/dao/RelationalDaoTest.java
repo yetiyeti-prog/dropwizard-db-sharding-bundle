@@ -128,7 +128,7 @@ public class RelationalDaoTest {
 
         val newValue = UUID.randomUUID().toString();
         int rowsUpdated = relationalDao.updateUsingQuery(relationalKey,
-                UpdateParams.builder()
+                UpdateOperationMeta.builder()
                         .queryName("testUpdateUsingKeyTwo")
                         .params(ImmutableMap.of("keyTwo", "2",
                                 "value", newValue))
@@ -175,7 +175,7 @@ public class RelationalDaoTest {
 
         val newValue = UUID.randomUUID().toString();
         int rowsUpdated = relationalDao.updateUsingQuery(relationalKey,
-                UpdateParams.builder()
+                UpdateOperationMeta.builder()
                         .queryName("testUpdateUsingKeyTwo")
                         .params(ImmutableMap.of("keyTwo", UUID.randomUUID().toString(),
                                 "value", newValue))

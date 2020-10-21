@@ -137,9 +137,9 @@ public class LookupDao<T> implements ShardedDao<T> {
 
         }
 
-        public int update(final UpdateParams updateParams) {
-            Query query = currentSession().createNamedQuery(updateParams.getQueryName());
-            updateParams.getParams().forEach(query::setParameter);
+        public int update(final UpdateOperationMeta updateOperationMeta) {
+            Query query = currentSession().createNamedQuery(updateOperationMeta.getQueryName());
+            updateOperationMeta.getParams().forEach(query::setParameter);
             return query.executeUpdate();
         }
     }
@@ -261,10 +261,10 @@ public class LookupDao<T> implements ShardedDao<T> {
         return updateImpl(id, dao::get, updater, dao);
     }
 
-    public int updateUsingQuery(String id, UpdateParams updateParams) {
+    public int updateUsingQuery(String id, UpdateOperationMeta updateOperationMeta) {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
-        return Transactions.execute(dao.sessionFactory, false, dao::update, updateParams);
+        return Transactions.execute(dao.sessionFactory, false, dao::update, updateOperationMeta);
     }
 
     private boolean updateImpl(String id, Function<String, T> getter, Function<Optional<T>, T> updater, LookupDaoPriv dao) {
@@ -455,10 +455,10 @@ public class LookupDao<T> implements ShardedDao<T> {
             });
         }
 
-        public<U> LockedContext<T> updateUsingQuery(RelationalDao<U> relationalDao, UpdateParams updateParams) {
+        public<U> LockedContext<T> updateUsingQuery(RelationalDao<U> relationalDao, UpdateOperationMeta updateOperationMeta) {
             return apply(parent-> {
                 try {
-                    relationalDao.updateUsingQuery(this, updateParams);
+                    relationalDao.updateUsingQuery(this, updateOperationMeta);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

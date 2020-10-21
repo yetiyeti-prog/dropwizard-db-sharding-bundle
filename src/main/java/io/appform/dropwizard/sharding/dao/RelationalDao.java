@@ -104,9 +104,9 @@ public class RelationalDao<T> implements ShardedDao<T> {
                             .uniqueResult();
         }
 
-        public int update(final UpdateParams updateParams) {
-            Query query = currentSession().createNamedQuery(updateParams.getQueryName());
-            updateParams.getParams().forEach(query::setParameter);
+        public int update(final UpdateOperationMeta updateOperationMeta) {
+            Query query = currentSession().createNamedQuery(updateOperationMeta.getQueryName());
+            updateOperationMeta.getParams().forEach(query::setParameter);
             return query.executeUpdate();
         }
 
@@ -296,15 +296,15 @@ public class RelationalDao<T> implements ShardedDao<T> {
         }
     }
 
-    public int updateUsingQuery(String parentKey, UpdateParams updateParams) {
+    public int updateUsingQuery(String parentKey, UpdateOperationMeta updateOperationMeta) {
         int shardId = shardCalculator.shardId(parentKey);
         val dao = daos.get(shardId);
-        return Transactions.execute(dao.sessionFactory, false, dao::update, updateParams);
+        return Transactions.execute(dao.sessionFactory, false, dao::update, updateOperationMeta);
     }
 
-    public <U> int updateUsingQuery(LookupDao.LockedContext<U> lockedContext, UpdateParams updateParams) {
+    public <U> int updateUsingQuery(LookupDao.LockedContext<U> lockedContext, UpdateOperationMeta updateOperationMeta) {
         val dao = daos.get(lockedContext.getShardId());
-        return Transactions.execute(lockedContext.getSessionFactory(), false, dao::update, updateParams, false);
+        return Transactions.execute(lockedContext.getSessionFactory(), false, dao::update, updateOperationMeta, false);
     }
 
 

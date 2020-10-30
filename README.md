@@ -35,6 +35,36 @@ Dao classes in db sharding bundle are a layer above Hibernate. Daos interact wit
  * A dao used to work with entities related to a parent shard. The parent may or maynot be physically present.
  * A murmur 128 hash of the string parent key is used to route the save and retrieve calls from the proper shard.
 
+### LookupDao
+ * A dao to save and retrieve top level entities in the system.
+ * Entity persisted using LookupDao needs to have exactly one field annotated with @LookupKey. This field will
+   be used as sharding key and hashed to right shard by same logic explained above.
+
+###CacheableLookupDao
+ * A read-through/write-through wrapper over LookupDao.
+ * It has a simple cache interface ```LookupCache``` with essential methods.
+ * Any custom cache implementation can be used to implement this cache and initialize ```CacheableLookupDao``` eg. Caffeine/Guava cache.
+
+###CacheableRelationalDao
+ * A read-through/write-through wrapper over RelationalDao.
+ * It has a simple cache interface ```RelationalCache``` with more methods compared to LookupCache.
+ * Any custom cache implementation can be used to implement this cache and initialize ```CacheableRelationalDao``` eg. Caffeine/Guava cache.
+
+###FAQs about DAOs
+##If both RelationalDao and LookupDao use same logic of sharding based on a key, what is the difference between these two DAOs?
+When to use which one?
+This can be slightly confusing to a beginner!
+RelationalDao is right choice for all entities that can be seen as children of same parent. While LookupDao
+is right choice for an entity that doesn't seem to have parent-child relationship or sibling relationship with any other entity.
+
+Example - If merchant is considered as parent entity, all entities such as merchant payment options,
+merchant attributes, merchant preference info can be treated as children of this parent entity and persisted
+using a RelationalDao. Using a relational dao indicates that these entities are related and should be colocated
+on same shard to enable join/subselect queries etc.
+
+But, another entity such as Agent table, which keeps info of agents who work on acquiring or helping multiple merchants, and are not related
+to any other entity in merchant database, may use a LookupDao, since it is a TOP-LEVEL entity in the system.
+
 ####
 ##What is the concept of parent key in RelationalDao?
 One of the main requirements of sharding relational data is to colocate data for entities that might be
@@ -42,7 +72,6 @@ accessed or retrived together. For example, a merchant's profile, her store info
 in some flows, so it should be located on the same shard for a merchant M.
 For this purpose, shard containing merchant M's primary profile info can be considered as parent shard and merchant's Id can be treated as parent key.
 This parent key can be used for persisting related entities for the merchant using Relational Dao.
-
 
 ##Is it necessary for different entities to use same parent key?
 Only for related entities, it makes sense to pick and use same parent key.
@@ -58,15 +87,32 @@ One of the fields in the entity can be annotated with @LookupKey annotation to u
 entity. This field will be treated as hashing key with the Dao.
 
 ## Shard blacklisting
-TBD
+It is possible sometimes that one or more shards go bad due to a hardware or connectivity issue.
+In that situation, that shard can be blacklisted, to keep service operational while shard is fixed
+or shard endpoint is changed.
 
+```ShardBlacklistingStore``` is an interface, which contains methods to:
+ * blacklist a shard
+ * unblacklist a shard
+ * check if a shard is blacklisted
+
+Since this library bundle will be part of an application with multiple boxes, it will be
+easier to implement ```ShardBlacklistingStore``` as integration with a distributed cache or designated service which
+will keep account of currently blacklisted shards for your backend service.
 
 ##Features
 * Pagination support
 
+*       Hibernate framework has in-built support for pagination.
+        DBShardingBundle has wrapper methods which internally call pagination-supporting hibernate apis such as list(Criteria)
+        Example - public List<T> select(String parentKey, DetachedCriteria criteria, int first, int numResults) throws Exception;
+
+* Updating multiple rows at once - TBD
+
+
+Please refer test classes to understand sample usage of daos.
+
 ## Usage
-
-
 The project dependencies are:
 ```
 <dependency>

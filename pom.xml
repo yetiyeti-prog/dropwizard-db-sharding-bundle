@@ -71,7 +71,7 @@
         <caffeine.version>2.6.2</caffeine.version>
         <junit.version>4.12</junit.version>
         <h2.version>1.4.196</h2.version>
-        <mockito.version>2.9.0</mockito.version>
+        <mockito.version>3.7.7</mockito.version>
     </properties>
 
     <dependencyManagement>

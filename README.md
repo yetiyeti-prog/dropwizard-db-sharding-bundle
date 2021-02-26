@@ -40,18 +40,18 @@ Dao classes in db sharding bundle are a layer above Hibernate. Daos interact wit
  * Entity persisted using LookupDao needs to have exactly one field annotated with @LookupKey. This field will
    be used as sharding key and hashed to right shard by same logic explained above.
 
-###CacheableLookupDao
+### CacheableLookupDao
  * A read-through/write-through wrapper over LookupDao.
  * It has a simple cache interface ```LookupCache``` with essential methods.
  * Any custom cache implementation can be used to implement this cache and initialize ```CacheableLookupDao``` eg. Caffeine/Guava cache.
 
-###CacheableRelationalDao
+### CacheableRelationalDao
  * A read-through/write-through wrapper over RelationalDao.
  * It has a simple cache interface ```RelationalCache``` with more methods compared to LookupCache.
  * Any custom cache implementation can be used to implement this cache and initialize ```CacheableRelationalDao``` eg. Caffeine/Guava cache.
 
-###FAQs about DAOs
-##If both RelationalDao and LookupDao use same logic of sharding based on a key, what is the difference between these two DAOs?
+### FAQs about DAOs
+#### If both RelationalDao and LookupDao use same logic of sharding based on a key, what is the difference between these two DAOs?
 When to use which one?
 This can be slightly confusing to a beginner!
 RelationalDao is right choice for all entities that can be seen as children of same parent. While LookupDao
@@ -65,23 +65,22 @@ on same shard to enable join/subselect queries etc.
 But, another entity such as Agent table, which keeps info of agents who work on acquiring or helping multiple merchants, and are not related
 to any other entity in merchant database, may use a LookupDao, since it is a TOP-LEVEL entity in the system.
 
-####
-##What is the concept of parent key in RelationalDao?
+#### What is the concept of parent key in RelationalDao?
 One of the main requirements of sharding relational data is to colocate data for entities that might be
 accessed or retrived together. For example, a merchant's profile, her store information, her payment options might be pulled together
 in some flows, so it should be located on the same shard for a merchant M.
 For this purpose, shard containing merchant M's primary profile info can be considered as parent shard and merchant's Id can be treated as parent key.
 This parent key can be used for persisting related entities for the merchant using Relational Dao.
 
-##Is it necessary for different entities to use same parent key?
+#### Is it necessary for different entities to use same parent key?
 Only for related entities, it makes sense to pick and use same parent key.
 
-##Is sharding key specific to table or entire db?
+#### Is sharding key specific to table or entire db?
 Sharding key is required to shard an entity's data among different shards, it may have no relation in general
 with any other entity. But, mostly entities are related to each other, so picking one sharding key/parent key
 to persist a number of related entities helps to keep code predictable and maintainable.
 
-##What is alternative for persisting entity that is a root entity in itself and has no clear parent?
+#### What is alternative for persisting entity that is a root entity in itself and has no clear parent?
 LookupDao can be used for this purpose. Unlike RelationalDao, LookupDao has the concept of LookupKey.
 One of the fields in the entity can be annotated with @LookupKey annotation to use this field for saving and retrieving
 entity. This field will be treated as hashing key with the Dao.
@@ -100,7 +99,7 @@ Since this library bundle will be part of an application with multiple boxes, it
 easier to implement ```ShardBlacklistingStore``` as integration with a distributed cache or designated service which
 will keep account of currently blacklisted shards for your backend service.
 
-##Features
+## Features
 * Pagination support
 
 *       Hibernate framework has in-built support for pagination.

@@ -38,6 +38,14 @@
                 <role>developer</role>
             </roles>
         </developer>
+        <developer>
+            <id>AnkushNakaskar</id>
+            <name>Ankush Nakaskar</name>
+            <email>ankush.nakaskar@gmail.com</email>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
     </developers>
 
     <issueManagement>

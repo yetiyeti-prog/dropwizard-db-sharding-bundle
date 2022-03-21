@@ -397,11 +397,28 @@ public class RelationalDao<T> implements ShardedDao<T> {
         return Transactions.<Long, DetachedCriteria>execute(dao.sessionFactory, true, dao::count, criteria);
     }
 
+
     public boolean exists(String parentKey, Object key) {
         int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
         Optional<T> result = Transactions.<T, Object>executeAndResolve(dao.sessionFactory, true, dao::get, key);
         return result.isPresent();
+    }
+
+    /**
+     * Queries using the specified criteria across all shards and returns the counts of rows satisfying the criteria.
+     * <b>Note:</b> This method runs the query serially and it's usage is not recommended.
+     * @param criteria The select criteria
+     * @return List of counts in each shard
+     */
+    public List<Long> countScatterGather(DetachedCriteria criteria) {
+        return daos.stream().map(dao -> {
+            try {
+                return Transactions.execute(dao.sessionFactory, true, dao::count, criteria);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.toList());
     }
 
     public List<T> scatterGather(DetachedCriteria criteria, int start, int numRows) {

@@ -28,6 +28,7 @@ import io.dropwizard.hibernate.AbstractDAO;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import lombok.var;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.LockMode;
@@ -305,7 +306,13 @@ public class LookupDao<T> implements ShardedDao<T> {
     public ReadOnlyContext<T> readOnlyExecutor(String id) {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
-        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), id);
+        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), null, id);
+    }
+
+    public ReadOnlyContext<T> readOnlyExecutor(String id, Runnable entityPopulator) {
+        int shardId = shardCalculator.shardId(id);
+        LookupDaoPriv dao = daos.get(shardId);
+        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), entityPopulator, id);
     }
 
     public LockedContext<T> saveAndGetExecutor(T entity) {
@@ -404,20 +411,21 @@ public class LookupDao<T> implements ShardedDao<T> {
         private final int shardId;
         private final SessionFactory sessionFactory;
         private final Function<String, T> getter;
+        private final Runnable entityPopulator;
         private final String key;
         private final List<Function<T, Void>> operations = Lists.newArrayList();
         private final boolean skipTransaction;
-
-        private T entity;
 
         public ReadOnlyContext(
                 int shardId,
                 SessionFactory sessionFactory,
                 Function<String, T> getter,
+                Runnable entityPopulator,
                 String key) {
             this.shardId = shardId;
             this.sessionFactory = sessionFactory;
             this.getter = getter;
+            this.entityPopulator = entityPopulator;
             this.key = key;
             val skipFlag = System.getProperty("lookup.ro.skipTxn");
             this.skipTransaction = null != skipFlag && (skipFlag.isEmpty() || Boolean.parseBoolean(skipFlag));
@@ -447,10 +455,27 @@ public class LookupDao<T> implements ShardedDao<T> {
         }
 
         public T execute() {
+            var result = executeImpl();
+            if(null == result) {
+                if(null != entityPopulator) {
+                    entityPopulator.run(); //Try to populate enbtity (maybe from cold store etc)
+                    result = executeImpl();
+                }
+                else {
+                    throw new RuntimeException("Entity doesn't exist for key: " + key);
+                }
+            }
+            return result;
+        }
+
+        private T executeImpl() {
             TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, true, this.skipTransaction);
             transactionHandler.beforeStart();
             try {
-                T result = generateEntity();
+                T result = getter.apply(key);
+                if(null == result) {
+                    return null;
+                }
                 operations.forEach(operation -> operation.apply(result));
                 return result;
             }
@@ -461,14 +486,6 @@ public class LookupDao<T> implements ShardedDao<T> {
             finally {
                 transactionHandler.afterEnd();
             }
-        }
-
-        private T generateEntity() {
-            final T result = getter.apply(key);
-            if (result == null) {
-                throw new RuntimeException("Entity doesn't exist for key: " + key);
-            }
-            return result;
         }
     }
 

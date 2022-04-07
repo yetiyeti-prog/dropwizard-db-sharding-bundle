@@ -18,9 +18,9 @@
 package io.appform.dropwizard.sharding.dao;
 
 import com.google.common.base.Preconditions;
-import io.dropwizard.hibernate.AbstractDAO;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
 import io.appform.dropwizard.sharding.utils.Transactions;
+import io.dropwizard.hibernate.AbstractDAO;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -237,6 +237,16 @@ public class RelationalDao<T> implements ShardedDao<T> {
         }
     }
 
+    <U> List<T> select(LookupDao.ReadOnlyContext<U> context, DetachedCriteria criteria, int first, int numResults) throws Exception {
+        final RelationalDaoPriv dao = daos.get(context.getShardId());
+        SelectParamPriv selectParam = SelectParamPriv.builder()
+                .criteria(criteria)
+                .start(first)
+                .numRows(numResults)
+                .build();
+        return Transactions.execute(context.getSessionFactory(), true, dao::select, selectParam, t -> t, false);
+    }
+
     public boolean update(String parentKey, Object id, Function<T, T> updater) {
         int shardId = shardCalculator.shardId(parentKey);
         RelationalDaoPriv dao = daos.get(shardId);
@@ -295,6 +305,7 @@ public class RelationalDao<T> implements ShardedDao<T> {
             throw new RuntimeException("Error updating entity with criteria: " + criteria, e);
         }
     }
+
 
     public int updateUsingQuery(String parentKey, UpdateOperationMeta updateOperationMeta) {
         int shardId = shardCalculator.shardId(parentKey);

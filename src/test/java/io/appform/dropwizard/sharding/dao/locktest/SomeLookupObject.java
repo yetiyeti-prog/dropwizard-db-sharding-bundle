@@ -23,6 +23,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.util.List;
 
 /**
  * Some lookup object
@@ -44,6 +45,9 @@ public class SomeLookupObject {
 
     @Column
     private String name;
+
+    @Transient
+    private List<SomeOtherObject> children;
 
     @Builder
     public SomeLookupObject(String myId, String name) {

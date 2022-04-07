@@ -26,6 +26,7 @@ import io.appform.dropwizard.sharding.dao.UpdateOperationMeta;
 import io.appform.dropwizard.sharding.sharding.BalancedShardManager;
 import io.appform.dropwizard.sharding.sharding.ShardManager;
 import io.appform.dropwizard.sharding.utils.ShardCalculator;
+import lombok.SneakyThrows;
 import lombok.val;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
@@ -40,11 +41,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
 
 /**
  * Test locking behavior
@@ -62,6 +63,9 @@ public class LockTest {
         configuration.setProperty("hibernate.connection.url", "jdbc:h2:mem:" + dbName);
         configuration.setProperty("hibernate.hbm2ddl.auto", "create");
         configuration.setProperty("hibernate.current_session_context_class", "managed");
+        configuration.setProperty("hibernate.show_sql", "true");
+//        configuration.setProperty("hibernate.format_sql", "true");
+
         configuration.addAnnotatedClass(SomeLookupObject.class);
         configuration.addAnnotatedClass(SomeOtherObject.class);
 
@@ -431,5 +435,47 @@ public class LockTest {
 
         Assert.assertEquals("Hello3",relationDao.get(parent2.getMyId(), child3.getId()).get().getValue());
         Assert.assertEquals("Parent 2",lookupDao.get(parent2Id).get().getName());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testReadMultiChild() {
+        SomeLookupObject p1 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Parent 1")
+                .build();
+        lookupDao.saveAndGetExecutor(p1)
+                .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
+                .save(relationDao, parent -> SomeOtherObject.builder()
+                        .myId(parent.getMyId())
+                        .value("Hello")
+                        .build())
+                .saveAll(relationDao,
+                         parent -> IntStream.range(1,6)
+                                 .mapToObj(i -> SomeOtherObject.builder()
+                                         .myId(parent.getMyId())
+                                         .value(String.format("Hello_%s", i))
+                                         .build())
+                                 .collect(Collectors.toList())
+                        )
+                .mutate(parent -> parent.setName("Changed"))
+                .execute();
+
+        final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("myId", p1.getMyId()))
+                .addOrder(Order.asc("id"));
+        val testExecuted = new AtomicBoolean();
+        val res = lookupDao.readOnlyExecutor(p1.getMyId())
+                .readAugmentParent(relationDao, allSelectCriteria, 0, Integer.MAX_VALUE, (parent, children) -> {
+                    assertNull(parent.getChildren());
+                    assertEquals(6, children.size());
+                    assertNotNull(parent);
+                    testExecuted.set(true);
+                    parent.setChildren(children);
+                })
+                .execute();
+
+        assertEquals(6, res.getChildren().size());
+        assertTrue(testExecuted.get());
     }
 }

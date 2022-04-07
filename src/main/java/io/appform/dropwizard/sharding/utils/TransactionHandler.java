@@ -32,11 +32,17 @@ public class TransactionHandler {
     @Getter
     private Session session;
     private final SessionFactory sessionFactory;
-    private boolean readOnly;
+    private final boolean readOnly;
+    private final boolean skipCommit;
 
     public TransactionHandler(SessionFactory sessionFactory, boolean readOnly) {
+        this(sessionFactory, readOnly, false);
+    }
+
+    public TransactionHandler(SessionFactory sessionFactory, boolean readOnly, boolean skipCommit) {
         this.sessionFactory = sessionFactory;
         this.readOnly = readOnly;
+        this.skipCommit = skipCommit;
     }
 
     public void beforeStart() {
@@ -45,7 +51,9 @@ public class TransactionHandler {
         try {
             configureSession();
             ManagedSessionContext.bind(session);
-            beginTransaction();
+            if (!skipCommit) {
+                beginTransaction();
+            }
         } catch (Throwable th) {
             session.close();
             session = null;
@@ -60,9 +68,13 @@ public class TransactionHandler {
         }
 
         try {
-            commitTransaction();
+            if(!skipCommit) {
+                commitTransaction();
+            }
         } catch (Exception e) {
-            rollbackTransaction();
+            if(!skipCommit) {
+                rollbackTransaction();
+            }
             throw e;
         } finally {
             session.close();

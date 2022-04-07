@@ -27,6 +27,7 @@ import io.appform.dropwizard.sharding.utils.Transactions;
 import io.dropwizard.hibernate.AbstractDAO;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.hibernate.LockMode;
@@ -405,6 +406,7 @@ public class LookupDao<T> implements ShardedDao<T> {
         private final Function<String, T> getter;
         private final String key;
         private final List<Function<T, Void>> operations = Lists.newArrayList();
+        private final boolean skipTransaction;
 
         private T entity;
 
@@ -417,6 +419,8 @@ public class LookupDao<T> implements ShardedDao<T> {
             this.sessionFactory = sessionFactory;
             this.getter = getter;
             this.key = key;
+            val skipFlag = System.getProperty("lookup.ro.skipTxn");
+            this.skipTransaction = null != skipFlag && (skipFlag.isEmpty() || Boolean.parseBoolean(skipFlag));
         }
 
 
@@ -443,7 +447,7 @@ public class LookupDao<T> implements ShardedDao<T> {
         }
 
         public T execute() {
-            TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, true, true);
+            TransactionHandler transactionHandler = new TransactionHandler(sessionFactory, true, this.skipTransaction);
             transactionHandler.beforeStart();
             try {
                 T result = generateEntity();

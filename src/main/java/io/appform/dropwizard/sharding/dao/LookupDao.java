@@ -309,10 +309,14 @@ public class LookupDao<T> implements ShardedDao<T> {
         return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), null, id);
     }
 
-    public ReadOnlyContext<T> readOnlyExecutor(String id, Runnable entityPopulator) {
+    public ReadOnlyContext<T> readOnlyExecutor(String id, Supplier<Boolean> entityPopulator) {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
-        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), entityPopulator, id);
+        return new ReadOnlyContext<>(shardId,
+                                     dao.sessionFactory,
+                                     key -> dao.getLocked(key, LockMode.NONE),
+                                     entityPopulator,
+                                     id);
     }
 
     public LockedContext<T> saveAndGetExecutor(T entity) {
@@ -411,7 +415,7 @@ public class LookupDao<T> implements ShardedDao<T> {
         private final int shardId;
         private final SessionFactory sessionFactory;
         private final Function<String, T> getter;
-        private final Runnable entityPopulator;
+        private final Supplier<Boolean> entityPopulator;
         private final String key;
         private final List<Function<T, Void>> operations = Lists.newArrayList();
         private final boolean skipTransaction;
@@ -420,7 +424,7 @@ public class LookupDao<T> implements ShardedDao<T> {
                 int shardId,
                 SessionFactory sessionFactory,
                 Function<String, T> getter,
-                Runnable entityPopulator,
+                Supplier<Boolean> entityPopulator,
                 String key) {
             this.shardId = shardId;
             this.sessionFactory = sessionFactory;
@@ -437,35 +441,44 @@ public class LookupDao<T> implements ShardedDao<T> {
             return this;
         }
 
+
         public <U> ReadOnlyContext<T> readAugmentParent(
                 RelationalDao<U> relationalDao,
                 DetachedCriteria criteria,
                 int first,
                 int numResults,
                 BiConsumer<T, List<U>> consumer) {
+            return readAugmentParent(relationalDao, criteria, first, numResults, consumer, p -> true);
+        }
+
+        public <U> ReadOnlyContext<T> readAugmentParent(
+                RelationalDao<U> relationalDao,
+                DetachedCriteria criteria,
+                int first,
+                int numResults,
+                BiConsumer<T, List<U>> consumer,
+                Predicate<T> filter) {
             return apply(parent -> {
-                try {
-                    consumer.accept(parent, relationalDao.select(this, criteria, first, numResults));
-                }
-                catch (Exception e) {
-                    throw new RuntimeException(e);
+                if (filter.test(parent)) {
+                    try {
+                        consumer.accept(parent, relationalDao.select(this, criteria, first, numResults));
+                    }
+                    catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
                 return null;
             });
         }
 
-        public T execute() {
+        public Optional<T> execute() {
             var result = executeImpl();
-            if(null == result) {
-                if(null != entityPopulator) {
-                    entityPopulator.run(); //Try to populate enbtity (maybe from cold store etc)
-                    result = executeImpl();
-                }
-                else {
-                    throw new RuntimeException("Entity doesn't exist for key: " + key);
-                }
+            if (null == result
+                    && null != entityPopulator
+                    && Boolean.TRUE.equals(entityPopulator.get())) {//Try to populate entity (maybe from cold store etc)
+                result = executeImpl();
             }
-            return result;
+            return Optional.ofNullable(result);
         }
 
         private T executeImpl() {
@@ -473,7 +486,7 @@ public class LookupDao<T> implements ShardedDao<T> {
             transactionHandler.beforeStart();
             try {
                 T result = getter.apply(key);
-                if(null == result) {
+                if (null == result) {
                     return null;
                 }
                 operations.forEach(operation -> operation.apply(result));

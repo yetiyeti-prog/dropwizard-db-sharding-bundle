@@ -451,7 +451,9 @@ public class LockTest {
                 })
                 .execute();
 
-        assertEquals(6, res.getChildren().size());
+        assertTrue(res.isPresent());
+        assertEquals(6, res.get().getChildren().size());
+        assertEquals(6, res.get().getChildren().size());
         assertTrue(testExecuted.get());
     }
 
@@ -467,13 +469,9 @@ public class LockTest {
         final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
                 .add(Restrictions.eq("myId", p1.getMyId()))
                 .addOrder(Order.asc("id"));
-        try {
-            lookupDao.readOnlyExecutor(p1.getMyId()).execute();
-            fail("Should have failed");
-        }
-        catch (RuntimeException e) {
-            assertNotNull(e.getMessage());
-        }
+
+        assertFalse(lookupDao.readOnlyExecutor(p1.getMyId()).execute().isPresent());
+
         val testExecuted = new AtomicBoolean();
         val res = lookupDao.readOnlyExecutor(p1.getMyId(),
                                              () -> saveEntity(lookupDao.saveAndGetExecutor(p1)))
@@ -486,11 +484,76 @@ public class LockTest {
                 })
                 .execute();
 
-        assertEquals(6, res.getChildren().size());
+        assertTrue(res.isPresent());
+        assertEquals(6, res.get().getChildren().size());
         assertTrue(testExecuted.get());
     }
 
-    private SomeLookupObject saveEntity(LookupDao.LockedContext<SomeLookupObject> lockedContext) {
+    @Test
+    @SneakyThrows
+    public void testReadMultiChildRetrieveNoPopulate() {
+        final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("myId", "0"))
+                .addOrder(Order.asc("id"));
+        assertFalse(lookupDao.readOnlyExecutor("0").execute().isPresent());
+
+        assertFalse(lookupDao.readOnlyExecutor("0", () -> false)
+                            .readAugmentParent(relationDao,
+                                               allSelectCriteria,
+                                               0,
+                                               Integer.MAX_VALUE,
+                                               (parent, children) -> {
+                                               })
+                            .execute()
+                            .isPresent());
+    }
+
+    @Test
+    @SneakyThrows
+    public void testReadMultiChildConditional() {
+        SomeLookupObject p1 = SomeLookupObject.builder()
+                .myId("0")
+                .name("Parent 1")
+                .build();
+        saveEntity(lookupDao.saveAndGetExecutor(p1));
+        SomeLookupObject p2 = SomeLookupObject.builder()
+                .myId("1")
+                .name("Parent 1")
+                .build();
+        saveEntity(lookupDao.saveAndGetExecutor(p2));
+
+        final DetachedCriteria allSelectCriteria = DetachedCriteria.forClass(SomeOtherObject.class)
+                .add(Restrictions.eq("myId", p1.getMyId()))
+                .addOrder(Order.asc("id"));
+        val testExecuted = new AtomicBoolean();
+        val res = lookupDao.readOnlyExecutor(p1.getMyId())
+                .readAugmentParent(relationDao, allSelectCriteria, 0, Integer.MAX_VALUE, (parent, children) -> {
+                    assertNull(parent.getChildren());
+                    assertEquals(6, children.size());
+                    assertNotNull(parent);
+                    testExecuted.set(true);
+                    parent.setChildren(children);
+                })
+                .execute();
+
+        assertTrue(res.isPresent());
+        assertEquals(6, res.get().getChildren().size());
+        assertTrue(testExecuted.get());
+
+
+        testExecuted.set(false);
+        val res2 = lookupDao.readOnlyExecutor(p2.getMyId())
+                .readAugmentParent(relationDao, allSelectCriteria, 0, Integer.MAX_VALUE, (parent, children) -> {
+                                       testExecuted.set(true);
+                                   },
+                                   p -> !p.getMyId().equals("1")) //Don't read children if object id is blah
+                .execute();
+
+        assertTrue(res2.isPresent());
+        assertFalse(testExecuted.get());
+    }
+
+    private boolean saveEntity(LookupDao.LockedContext<SomeLookupObject> lockedContext) {
         return lockedContext
                 .filter(parent -> !Strings.isNullOrEmpty(parent.getName()))
                 .save(relationDao, parent -> SomeOtherObject.builder()
@@ -506,6 +569,6 @@ public class LockTest {
                                  .collect(Collectors.toList())
                         )
                 .mutate(parent -> parent.setName("Changed"))
-                .execute();
+                .execute() != null;
     }
 }

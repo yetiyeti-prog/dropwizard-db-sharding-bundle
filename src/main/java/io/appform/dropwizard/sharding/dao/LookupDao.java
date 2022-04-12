@@ -442,6 +442,13 @@ public class LookupDao<T> implements ShardedDao<T> {
         }
 
 
+        public <U> ReadOnlyContext<T> readOneAugmentParent(
+                RelationalDao<U> relationalDao,
+                DetachedCriteria criteria,
+                BiConsumer<T, List<U>> consumer) {
+            return readAugmentParent(relationalDao, criteria, 0, 1, consumer, p -> true);
+        }
+
         public <U> ReadOnlyContext<T> readAugmentParent(
                 RelationalDao<U> relationalDao,
                 DetachedCriteria criteria,
@@ -449,6 +456,14 @@ public class LookupDao<T> implements ShardedDao<T> {
                 int numResults,
                 BiConsumer<T, List<U>> consumer) {
             return readAugmentParent(relationalDao, criteria, first, numResults, consumer, p -> true);
+        }
+
+        public <U> ReadOnlyContext<T> readOneAugmentParent(
+                RelationalDao<U> relationalDao,
+                DetachedCriteria criteria,
+                BiConsumer<T, List<U>> consumer,
+                Predicate<T> filter) {
+            return readAugmentParent(relationalDao, criteria, 0, 1, consumer, filter);
         }
 
         public <U> ReadOnlyContext<T> readAugmentParent(

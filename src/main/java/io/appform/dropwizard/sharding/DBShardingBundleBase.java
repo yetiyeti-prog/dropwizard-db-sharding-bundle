@@ -65,7 +65,7 @@ import java.util.stream.IntStream;
  * Base for bundles. This cannot be used by clients. Use one of the derived classes.
  */
 @Slf4j
-abstract class DBShardingBundleBase<T extends Configuration> implements ConfiguredBundle<T> {
+public abstract class DBShardingBundleBase<T extends Configuration> implements ConfiguredBundle<T> {
 
     private static final String DEFAULT_NAMESPACE = "default";
     private static final String SHARD_ENV = "db.shards";

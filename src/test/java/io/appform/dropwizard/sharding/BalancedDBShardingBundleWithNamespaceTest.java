@@ -30,6 +30,8 @@ import static org.junit.Assert.assertTrue;
 
 public class BalancedDBShardingBundleWithNamespaceTest extends DBShardingBundleTestBase {
 
+
+
     @Override
     protected DBShardingBundleBase<TestConfig> getBundle() {
         return new BalancedDBShardingBundle<TestConfig>("namespace", Order.class, OrderItem.class) {

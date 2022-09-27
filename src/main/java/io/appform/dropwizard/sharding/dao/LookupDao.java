@@ -153,6 +153,7 @@ public class LookupDao<T> implements ShardedDao<T> {
     @Getter
     private final ShardCalculator<String> shardCalculator;
     private final Field keyField;
+    private final boolean roSkipTransaction;
 
     /**
      * Creates a new sharded DAO. The number of managed shards and bucketing is controlled by the {@link ShardManager}.
@@ -163,10 +164,12 @@ public class LookupDao<T> implements ShardedDao<T> {
     public LookupDao(
             List<SessionFactory> sessionFactories,
             Class<T> entityClass,
-            ShardCalculator<String> shardCalculator) {
+            ShardCalculator<String> shardCalculator,
+            boolean roSkipTransaction) {
         this.daos = sessionFactories.stream().map(LookupDaoPriv::new).collect(Collectors.toList());
         this.entityClass = entityClass;
         this.shardCalculator = shardCalculator;
+        this.roSkipTransaction = roSkipTransaction;
 
         Field fields[] = FieldUtils.getFieldsWithAnnotation(entityClass, LookupKey.class);
         Preconditions.checkArgument(fields.length != 0, "At least one field needs to be sharding key");
@@ -306,7 +309,7 @@ public class LookupDao<T> implements ShardedDao<T> {
     public ReadOnlyContext<T> readOnlyExecutor(String id) {
         int shardId = shardCalculator.shardId(id);
         LookupDaoPriv dao = daos.get(shardId);
-        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), null, id);
+        return new ReadOnlyContext<>(shardId, dao.sessionFactory, key -> dao.getLocked(key, LockMode.NONE), null, id, roSkipTransaction);
     }
 
     public ReadOnlyContext<T> readOnlyExecutor(String id, Supplier<Boolean> entityPopulator) {
@@ -316,7 +319,7 @@ public class LookupDao<T> implements ShardedDao<T> {
                                      dao.sessionFactory,
                                      key -> dao.getLocked(key, LockMode.NONE),
                                      entityPopulator,
-                                     id);
+                                     id, roSkipTransaction);
     }
 
     public LockedContext<T> saveAndGetExecutor(T entity) {
@@ -425,14 +428,14 @@ public class LookupDao<T> implements ShardedDao<T> {
                 SessionFactory sessionFactory,
                 Function<String, T> getter,
                 Supplier<Boolean> entityPopulator,
-                String key) {
+                String key,
+                boolean skipTransaction) {
             this.shardId = shardId;
             this.sessionFactory = sessionFactory;
             this.getter = getter;
             this.entityPopulator = entityPopulator;
             this.key = key;
-            val skipFlag = System.getProperty("lookup.ro.skipTxn");
-            this.skipTransaction = null != skipFlag && (skipFlag.isEmpty() || Boolean.parseBoolean(skipFlag));
+            this.skipTransaction = skipTransaction;
         }
 
 
@@ -538,7 +541,10 @@ public class LookupDao<T> implements ShardedDao<T> {
         private List<Function<T, Void>> operations = Lists.newArrayList();
         private final Mode mode;
 
-        public LockedContext(int shardId, SessionFactory sessionFactory, Function<String, T> getter, String key) {
+        public LockedContext(int shardId,
+                             SessionFactory sessionFactory,
+                             Function<String, T> getter,
+                             String key) {
             this.shardId = shardId;
             this.sessionFactory = sessionFactory;
             this.function = getter;
@@ -566,7 +572,8 @@ public class LookupDao<T> implements ShardedDao<T> {
             return this;
         }
 
-        public <U> LockedContext<T> save(RelationalDao<U> relationalDao, Function<T, U> entityGenerator) {
+        public <U> LockedContext<T> save(RelationalDao<U> relationalDao,
+                                         Function<T, U> entityGenerator) {
             return apply(parent -> {
                 try {
                     U entity = entityGenerator.apply(parent);

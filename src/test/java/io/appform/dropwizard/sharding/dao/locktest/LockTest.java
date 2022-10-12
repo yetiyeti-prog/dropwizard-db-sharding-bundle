@@ -41,6 +41,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -455,6 +456,49 @@ public class LockTest {
         assertEquals(6, res.get().getChildren().size());
         assertEquals(6, res.get().getChildren().size());
         assertTrue(testExecuted.get());
+    }
+
+
+    @Test
+    public void testLockingSample() throws Exception {
+        SomeOtherObject someOtherObject = SomeOtherObject.builder()
+                .myId("11")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject someOtherObject2 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+        SomeOtherObject someOtherObject3 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+
+        // save
+        RelationalDao.LockedContext<SomeOtherObject> context = relationDao.saveAndGetExecutor(someOtherObject.getMyId(), someOtherObject);
+        context.save(relationDao, parent -> {
+            someOtherObject2.setMyId(String.valueOf(parent.getId()));
+            return  someOtherObject2;
+        });
+        context.save(relationDao, parent -> {
+            someOtherObject3.setMyId(String.valueOf(parent.getId()));
+            return  someOtherObject3;
+        });
+        context.execute();
+
+        // update
+        RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(someOtherObject.getMyId(),
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("myId", someOtherObject.getMyId())));
+        contextUpdate.mutate(parent -> parent.setValue("UPDAYE"));
+        contextUpdate.execute();
+
+        // get
+        Optional<SomeOtherObject> resp = relationDao.get(someOtherObject.getMyId(), 1L);
+        Assert.assertNotNull(resp.get());
+        Optional<SomeOtherObject> resp1 = relationDao.get(someOtherObject.getMyId(), 2L);
+        Assert.assertNotNull(resp1.get());
     }
 
     @Test

@@ -43,6 +43,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 /**
@@ -686,7 +687,7 @@ public class RelationalDao<T> implements ShardedDao<T> {
         public <U> LockedContext<T> createOrUpdate(
                 RelationalDao<U> relationalDao,
                 DetachedCriteria criteria,
-                Function<U, U> updater,
+                UnaryOperator<U> updater,
                 Supplier<U> entityGenerator) {
             return apply(parent -> {
                 try {

@@ -640,7 +640,6 @@ public class LockTest {
                     return child;
                 }, () -> false);
 
-
         contextUpdate.execute();
 
         // get

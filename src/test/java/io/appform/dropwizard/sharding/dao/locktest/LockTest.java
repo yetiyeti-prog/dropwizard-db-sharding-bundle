@@ -46,7 +46,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test locking behavior
@@ -491,7 +495,49 @@ public class LockTest {
         RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(someOtherObject.getMyId(),
                 DetachedCriteria.forClass(SomeOtherObject.class)
                         .add(Restrictions.eq("myId", someOtherObject.getMyId())));
-        contextUpdate.mutate(parent -> parent.setValue("UPDAYE"));
+        contextUpdate.mutate(parent -> parent.setValue("UPDATE"));
+        contextUpdate.execute();
+
+        // get
+        Optional<SomeOtherObject> resp = relationDao.get(someOtherObject.getMyId(), 1L);
+        Assert.assertNotNull(resp.get());
+        Assert.assertEquals("UPDATE", resp.get().getValue());
+        Optional<SomeOtherObject> resp1 = relationDao.get(someOtherObject.getMyId(), 2L);
+        Assert.assertNotNull(resp1.get());
+    }
+
+    @Test
+    public void testLockingUpdateOneChild() throws Exception {
+        SomeOtherObject someOtherObject = SomeOtherObject.builder()
+                .myId("11")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject someOtherObject2 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+
+        // save
+        RelationalDao.LockedContext<SomeOtherObject> context = relationDao.saveAndGetExecutor(someOtherObject.getMyId(), someOtherObject);
+        context.save(relationDao, parent -> {
+            someOtherObject2.setMyId(String.valueOf(parent.getId()));
+            return  someOtherObject2;
+        });
+        context.execute();
+
+        // update
+        RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(someOtherObject.getMyId(),
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("myId", someOtherObject.getMyId())));
+        contextUpdate.mutate(parent -> parent.setValue("UPDATE"));
+
+        contextUpdate.update(relationDao, someOtherObject2.getId(),
+                child -> {
+                    child.setValue("HELLO_UPDATED");
+                    return child;
+                });
+
         contextUpdate.execute();
 
         // get
@@ -499,6 +545,180 @@ public class LockTest {
         Assert.assertNotNull(resp.get());
         Optional<SomeOtherObject> resp1 = relationDao.get(someOtherObject.getMyId(), 2L);
         Assert.assertNotNull(resp1.get());
+        Assert.assertEquals("HELLO_UPDATED", resp1.get().getValue());
+    }
+
+    @Test
+    public void testLockingUpdateMultipleChild() throws Exception {
+        SomeOtherObject someOtherObject = SomeOtherObject.builder()
+                .myId("11")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject someOtherObject2 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+        SomeOtherObject someOtherObject3 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+
+        // save
+        RelationalDao.LockedContext<SomeOtherObject> context = relationDao.saveAndGetExecutor(someOtherObject.getMyId(), someOtherObject);
+        context.save(relationDao, parent -> {
+            someOtherObject2.setMyId(String.valueOf(parent.getId()));
+            return  someOtherObject2;
+        });
+        context.save(relationDao, parent -> {
+            someOtherObject3.setMyId(String.valueOf(parent.getId()));
+            return  someOtherObject3;
+        });
+        context.execute();
+
+        // update
+        RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(someOtherObject.getMyId(),
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("myId", someOtherObject.getMyId())));
+        contextUpdate.mutate(parent -> parent.setValue("UPDATE"));
+
+        contextUpdate.update(relationDao, someOtherObject2.getId(),
+                child1 -> {
+                    child1.setValue("CHILD_ONE");
+                    return child1;
+                });
+        contextUpdate.update(relationDao, someOtherObject3.getId(),
+                child2 -> {
+                    child2.setValue("CHILD_TWO");
+                    return child2;
+                });
+
+        contextUpdate.execute();
+
+        // get
+        Optional<SomeOtherObject> resp = relationDao.get(someOtherObject.getMyId(), 1L);
+        Assert.assertNotNull(resp.get());
+        Optional<SomeOtherObject> resp1 = relationDao.get(someOtherObject.getMyId(), 2L);
+        Assert.assertNotNull(resp1.get());
+        Assert.assertEquals("CHILD_ONE", resp1.get().getValue());
+        Optional<SomeOtherObject> resp2 = relationDao.get(someOtherObject.getMyId(), 3L);
+        Assert.assertNotNull(resp2.get());
+        Assert.assertEquals("CHILD_TWO", resp2.get().getValue());
+    }
+
+    @Test
+    public void testLockingUpdateOneChildWithCriteria() throws Exception {
+        SomeOtherObject p1 = SomeOtherObject.builder()
+                .myId("11")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject c1 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+
+        // save
+        RelationalDao.LockedContext<SomeOtherObject> context = relationDao.saveAndGetExecutor(p1.getMyId(), p1);
+        context.save(relationDao, parent -> {
+            c1.setMyId(String.valueOf(parent.getId()));
+            return  c1;
+        });
+        context.execute();
+
+        // update
+        RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(p1.getMyId(),
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("myId", p1.getMyId())));
+        contextUpdate.mutate(parent -> parent.setValue("UPDATE"));
+
+        contextUpdate.update(relationDao,
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("id", c1.getId())),
+                child -> {
+                    child.setValue("CHILD_ONE");
+                    return child;
+                }, () -> false);
+
+
+        contextUpdate.execute();
+
+        // get
+        Optional<SomeOtherObject> resp = relationDao.get(p1.getMyId(), 1L);
+        Assert.assertNotNull(resp.get());
+        Assert.assertEquals("UPDATE", resp.get().getValue());
+
+        Optional<SomeOtherObject> resp1 = relationDao.get(p1.getMyId(), 2L);
+        Assert.assertNotNull(resp1.get());
+        Assert.assertEquals("CHILD_ONE", resp1.get().getValue());
+    }
+
+    @Test
+    public void testLockingUpdateMultipleChildWithCriteria() throws Exception {
+        SomeOtherObject p1 = SomeOtherObject.builder()
+                .myId("11")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject c1 = SomeOtherObject.builder()
+                .myId("12")
+                .value("Hello")
+                .build();
+
+        SomeOtherObject c2 = SomeOtherObject.builder()
+                .myId("13")
+                .value("Hello")
+                .build();
+
+        // save
+        RelationalDao.LockedContext<SomeOtherObject> context = relationDao.saveAndGetExecutor(p1.getMyId(), p1);
+        context.save(relationDao, parent -> {
+            c1.setMyId(String.valueOf(parent.getId()));
+            return  c1;
+        });
+        context.save(relationDao, parent -> {
+            c2.setMyId(String.valueOf(parent.getId()));
+            return  c2;
+        });
+        context.execute();
+
+        // update
+        RelationalDao.LockedContext<SomeOtherObject> contextUpdate = relationDao.lockAndGetExecutor(p1.getMyId(),
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("myId", p1.getMyId())));
+        contextUpdate.mutate(parent -> parent.setValue("UPDATE"));
+
+        contextUpdate.update(relationDao,
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("id", c1.getId())),
+                child -> {
+                    child.setValue("CHILD_ONE");
+                    return child;
+                }, () -> false);
+
+        contextUpdate.update(relationDao,
+                DetachedCriteria.forClass(SomeOtherObject.class)
+                        .add(Restrictions.eq("id", c2.getId())),
+                child -> {
+                    child.setValue("CHILD_TWO");
+                    return child;
+                }, () -> false);
+
+
+        contextUpdate.execute();
+
+        // get
+        Optional<SomeOtherObject> resp = relationDao.get(p1.getMyId(), 1L);
+        Assert.assertNotNull(resp.get());
+        Assert.assertEquals("UPDATE", resp.get().getValue());
+
+        Optional<SomeOtherObject> resp1 = relationDao.get(p1.getMyId(), 2L);
+        Assert.assertNotNull(resp1.get());
+        Assert.assertEquals("CHILD_ONE", resp1.get().getValue());
+
+        Optional<SomeOtherObject> resp2 = relationDao.get(p1.getMyId(), 3L);
+        Assert.assertNotNull(resp2.get());
+        Assert.assertEquals("CHILD_TWO", resp2.get().getValue());
     }
 
     @Test
